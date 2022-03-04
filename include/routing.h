@@ -1,0 +1,107 @@
+/*
+    author: Suhas Vittal
+    date:   4 February 2022
+*/
+
+#ifndef routing_H
+#define routing_H
+
+#include "defs.h"
+#include "coupling.h"
+#include "dag.h"
+
+#include <vector>
+#include <deque>
+#include <set>
+
+#include <utility>
+
+struct solution_kernel {
+    std::vector<boost_dagvertex> front_layer;
+    std::set<boost_dagvertex> completed_nodes;
+    std::map<boost_dagvertex, uint8_t> predecessor_table;
+    
+    layout current_layout;
+
+    std::deque<dagnode> schedule; 
+    solution_kernel* parent_kernel;
+
+    uint64_t swap_count;
+    double expected_prob_success;
+};
+
+struct router_params {
+    double slack;
+    uint16_t solution_cap;
+};
+
+struct minfold_dp {
+    std::pair<pqubit,pqubit> swap;
+    layout running_layout;
+    std::vector<uint64_t> best_in_row;
+    double min_score;
+};
+
+typedef std::vector<std::pair<pqubit,pqubit>> fold;
+
+class router {
+public:
+    router(coupling_graph&, router_params&);  
+
+    std::vector<std::string> run(dag&, boost_dagvertex& top_vertex);
+    std::vector<solution_kernel*> explore_kernel(solution_kernel* source);
+private:
+    friend class kernel_cmp;
+
+    std::vector<solution_kernel*> contract_solutions(
+        std::vector<solution_kernel*>&, std::set<solution_kernel*>& invalid_kernels);
+
+    std::vector<std::pair<dagnode,uint8_t>> get_future_gates(
+        std::vector<boost_dagvertex>& front_layer,
+        std::map<boost_dagvertex, uint8_t>& pred_table,
+        std::set<boost_dagvertex>& completed_nodes);
+    std::vector<fold> get_minfolds(
+        dagnode& target_gate,
+        layout& current_layout, 
+        std::vector<std::pair<dagnode,uint8_t>>& future_gates);
+    std::vector<fold> merge_folds(std::vector<std::vector<fold>>& fold_buckets);
+    double score_layout(uint16_t fold_size, layout&, std::vector<std::pair<dagnode,uint8_t>>& future_gates);
+
+    dagnode remap_gate_for_layout(dagnode&, layout&);
+
+    dag input_dag;
+    coupling_graph backend;
+    std::vector<std::vector<double>> dist_matrix;
+    std::map<std::pair<pqubit,pqubit>, std::vector<path>> paths_on_arch;
+
+    double slack;
+    uint16_t solution_cap;
+    double mean_degree;
+
+    std::vector<solution_kernel*> current_solutions;
+};
+
+class kernel_cmp {
+public:
+    kernel_cmp(router* callee) {
+        this->callee = callee;
+    }
+
+    inline bool operator()(solution_kernel* k1, solution_kernel* k2) {
+        auto future_gates_k1 = callee->get_future_gates(
+            k1->front_layer,
+            k1->predecessor_table,
+            k1->completed_nodes);
+        auto future_gates_k2 = callee->get_future_gates(
+            k2->front_layer,
+            k2->predecessor_table,
+            k2->completed_nodes);
+        double score_k1 = callee->score_layout(0, k1->current_layout, future_gates_k1);
+        double score_k2 = callee->score_layout(0, k2->current_layout, future_gates_k2);
+        return score_k1 < score_k2;
+    } 
+
+    router* callee;
+};
+
+#endif
