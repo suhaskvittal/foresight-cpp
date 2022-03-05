@@ -316,12 +316,10 @@ double router::score_layout(
             sops++;
         }
     }
-    double ppart = pops > 0 ? pscore/pops : 0;
+    double ppart = pops > 0 ? (pscore)/pops : 0;
     double spart = sops > 0 ? sscore/sops : 0;
-    double score = ppart + spart;
-    double size_delta = fold_size * exp(-((double)pops) * this->mean_degree);
-    //std::cout << "score parts: " << pscore/pops << "," << sscore/sops << "," << fold_size << "," << size_delta << "\n";
-    return score;// + size_delta;
+    double score = ppart + spart + ((double)fold_size)/(pops+sops);
+    return score;
 }
 
 dagnode router::remap_gate_for_layout(dagnode& original, layout& current_layout) {

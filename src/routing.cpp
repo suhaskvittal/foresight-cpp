@@ -62,12 +62,14 @@ std::vector<std::string> router::run(dag& circuit, boost_dagvertex& top_vertex) 
         for (uint16_t i = 0; i < 2*this->solution_cap; i++) {
             if (i >= current_solutions.size()) continue;
             solution_kernel* k = current_solutions[i];
+
 #pragma omp critical
             {
                 if (cycle % 10 == 0) 
                     std::cout << "\tnumber of swaps for solution " << i << ": " 
                         << k->swap_count << "\n";
             }
+
             if (k->front_layer.size() == 0) {
                 // We are finished.
                 // Compress ancestor data onto kernel.
@@ -111,8 +113,11 @@ std::vector<std::string> router::run(dag& circuit, boost_dagvertex& top_vertex) 
         cycle++;
     }
     std::vector<std::string> qasm_schedules;
+    uint64_t min_swaps = (uint64_t)-1;
     for (solution_kernel* s : completed_solutions) {
-        std::cout << "solution has " << s->swap_count << " swaps.\n";
+        if (s->swap_count < min_swaps) {
+            min_swaps = s->swap_count;
+        }
         std::string qasm_body;
         for (dagnode node : s->schedule) {
             std::string qasm_string = node.gate;  
@@ -125,6 +130,7 @@ std::vector<std::string> router::run(dag& circuit, boost_dagvertex& top_vertex) 
         qasm_schedules.push_back(qasm_body);
         delete s;
     }
+    std::cout << "minimum swap schedule is " << min_swaps << "\n";
     return qasm_schedules;
 }
 
