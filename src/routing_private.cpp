@@ -53,8 +53,8 @@ std::vector<solution_kernel*> router::contract_solutions(
     for (solution_kernel* base_kernel : min_kernels) {
         solution_kernel* curr = base_kernel->parent_kernel;
         while (curr != nullptr) {
-            for (int64_t i = curr->schedule.size() - 1; i >= 0; i--) {
-                dagnode schedule_node = curr->schedule[i];
+            for (uint32_t i = curr->schedule.size(); i > 0; i--) {
+                dagnode schedule_node = curr->schedule[i-1];
                 base_kernel->schedule.push_front(schedule_node);
             } 
             invalid_kernels.insert(curr);
@@ -70,8 +70,8 @@ std::vector<std::pair<dagnode, uint8_t>> router::get_future_gates(
     std::map<boost_dagvertex,uint8_t>& pred_table,
     std::set<boost_dagvertex>& completed_nodes)
 {
-    uint32_t layer_number = 0;
-    uint32_t gate_count = 0;
+    uint8_t is_first_layer = 1;
+    uint8_t gate_count = 0;
     std::vector<std::pair<dagnode, uint8_t>> future_gates;
     // Track modifications to the pred table
     std::vector<boost_dagvertex> inc_vertices;
@@ -94,12 +94,12 @@ std::vector<std::pair<dagnode, uint8_t>> router::get_future_gates(
                     qubit_depth[v1] = 0;
                 }
 
-                uint16_t depth = qubit_depth[v0] > qubit_depth[v1]
+                uint8_t depth = qubit_depth[v0] > qubit_depth[v1]
                     ? qubit_depth[v0] : qubit_depth[v1]; 
                 qubit_depth[v0]++;
                 qubit_depth[v1]++;
                 future_gates.push_back(std::make_pair(nodedata, depth)); 
-                if (layer_number > 0) gate_count++;
+                if (is_first_layer) gate_count++;
                 has2qop = 1;
             }
 
@@ -117,8 +117,8 @@ std::vector<std::pair<dagnode, uint8_t>> router::get_future_gates(
                 }
             }
         }
+        if (has2qop) is_first_layer = 0;
         curr_layer = std::move(next_layer);
-        layer_number += has2qop;
     }
 
     // Revert modifications to pred table
@@ -147,17 +147,17 @@ std::vector<fold> router::get_minfolds(
     minfold_dp DEFAULT_MINFOLD_DP_ENTRY = {
         std::pair<pqubit,pqubit>(0,0),
         current_layout,
-        std::vector<uint64_t>(),
+        std::vector<uint32_t>(),
         INFINITY
     };
 
     for (path p : paths) {
         // Construct minfold DP.
-        uint64_t r = p.size();
+        uint32_t r = p.size();
         std::vector<std::vector<minfold_dp>> dp(r,
             std::vector<minfold_dp>(r, DEFAULT_MINFOLD_DP_ENTRY));
-        for (uint64_t i = 0; i < r; i++) {
-            for (uint64_t j = 0; j < r-i; j++) {
+        for (uint32_t i = 0; i < r; i++) {
+            for (uint32_t j = 0; j < r-i; j++) {
                 std::pair<pqubit,pqubit> swap; 
                 layout test_layout;
                 if (i == 0 && j == 0) {
@@ -179,7 +179,7 @@ std::vector<fold> router::get_minfolds(
                     dp[i][j].min_score = score;
                 } else {
                     // Copy best in row array.
-                    dp[i][j].best_in_row = std::vector<uint64_t>(dp[i][j-1].best_in_row);
+                    dp[i][j].best_in_row = std::vector<uint32_t>(dp[i][j-1].best_in_row);
                     if (score == dp[i][j-1].min_score) {
                         dp[i][j].best_in_row.push_back(j);
                     }
@@ -189,9 +189,9 @@ std::vector<fold> router::get_minfolds(
             }
         }
         // Examine the off-diagonal of dp to get the best results for each row.
-        std::vector<std::pair<uint64_t,uint64_t>> best_entry_locs;
-        for (uint64_t i = 0; i < r; i++) {
-            uint64_t j = r-i-1;
+        std::vector<std::pair<uint32_t,uint32_t>> best_entry_locs;
+        for (uint32_t i = 0; i < r; i++) {
+            uint32_t j = r-i-1;
             minfold_dp dp_entry = dp[i][j];
             // Note that min_score is the global min score across all folds.
             // So we will clear minfolds if we achieve a lower min score.
@@ -201,18 +201,18 @@ std::vector<fold> router::get_minfolds(
                     minfolds.clear(); 
                     min_score = dp_entry.min_score;
                 }
-                for (uint64_t k : dp_entry.best_in_row) {
+                for (uint32_t k : dp_entry.best_in_row) {
                     best_entry_locs.push_back(std::make_pair(i, k));
                 }
             } 
         }
 
         for (auto loc : best_entry_locs) {
-            uint64_t i = loc.first;
-            uint64_t j = loc.second;
+            uint32_t i = loc.first;
+            uint32_t j = loc.second;
             fold minfold;
-            uint64_t k1 = 1;
-            uint64_t k2 = 1;
+            uint32_t k1 = 1;
+            uint32_t k2 = 1;
             uint8_t clk = 0;  // We want to interleave the swaps from both sides.
             // We use a clock to track which side we are using.
             while (k1 <= i || k2 <= j) {
@@ -252,7 +252,7 @@ std::vector<fold> router::merge_folds(std::vector<std::vector<fold>>& fold_bucke
         // Track unused folds.
         std::set<uint32_t> unused_fold_indices;
         // Try to merge the remaining folds if possible.
-        uint64_t j = 0;
+        uint32_t j = 0;
         for (uint32_t i = 0; i < fold_buckets.size(); i++) {
             if (fold_indices.count(i) == 0) continue;
             fold trial_fold(curr_fold);
@@ -298,8 +298,8 @@ double router::score_layout(
 {
     double pscore = 0.0;
     double sscore = 0.0;
-    uint16_t pops = 0;
-    uint16_t sops = 0;
+    uint8_t pops = 0;
+    uint8_t sops = 0;
 
     for (std::pair<dagnode,uint8_t> labeled_node : future_gates) {
         dagnode node = labeled_node.first;

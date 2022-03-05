@@ -20,7 +20,7 @@ coupling_graph load_coupling_graph(std::string filename) {
     std::string line;
     std::ifstream fin(filename, std::ifstream::in);
     std::getline(fin, line);
-    uint64_t num_qubits = stoi(line);
+    uint32_t num_qubits = stoi(line);
     for (pqubit i = 0; i < num_qubits; i++) {
         boost::add_vertex(i, backend); 
     }

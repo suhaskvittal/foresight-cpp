@@ -41,9 +41,9 @@ typedef boost::graph_traits<dag>::vertex_descriptor boost_dagvertex;
 #define CC_FINISHED     0x4
 
 struct qasm_properties {
-    uint64_t qarg_size;
-    uint64_t carg_size;
-    uint64_t circuit_size;
+    uint32_t qarg_size;
+    uint32_t carg_size;
+    uint32_t circuit_size;
 };
 
 qasm_properties async_add_onto_dag(std::string qasm, dag&, boost_dagvertex* topvertex_p, 

@@ -53,7 +53,7 @@ std::vector<std::string> router::run(dag& circuit, boost_dagvertex& top_vertex) 
     std::vector<solution_kernel*> completed_solutions;
     // Partition all the current solutions across each core.
     std::set<solution_kernel*> invalid_kernels;
-    uint64_t cycle = 0;
+    uint32_t cycle = 0;
     while (current_solutions.size() > 0) {
         std::vector<solution_kernel*> next_solutions;
         if (cycle % 10 == 0) std::cout << "iteration " << cycle << ":\n";
@@ -75,8 +75,8 @@ std::vector<std::string> router::run(dag& circuit, boost_dagvertex& top_vertex) 
                 // Compress ancestor data onto kernel.
                 solution_kernel* curr = k->parent_kernel;
                 while (curr != nullptr) {
-                    for (int64_t j = curr->schedule.size() - 1; j >= 0; j--) {
-                        k->schedule.push_front(curr->schedule[j]);
+                    for (uint32_t j = curr->schedule.size(); j > 0; j--) {
+                        k->schedule.push_front(curr->schedule[j-1]);
                     } 
                     invalid_kernels.insert(curr);
                     curr = curr->parent_kernel;
@@ -108,12 +108,12 @@ std::vector<std::string> router::run(dag& circuit, boost_dagvertex& top_vertex) 
             }
             invalid_kernels.clear();
         } else {
-            current_solutions = next_solutions;
+            current_solutions = std::move(next_solutions);
         }
         cycle++;
     }
     std::vector<std::string> qasm_schedules;
-    uint64_t min_swaps = (uint64_t)-1;
+    uint32_t min_swaps = (uint32_t)-1;
     for (solution_kernel* s : completed_solutions) {
         if (s->swap_count < min_swaps) {
             min_swaps = s->swap_count;
@@ -205,7 +205,7 @@ std::vector<solution_kernel*> router::explore_kernel(solution_kernel* source) {
                 }
             }
         }
-        front_layer = next_front_layer;
+        front_layer = std::move(next_front_layer);
     } while (exec_list.size() > 0);  // We keep finishing gates until we cannot.
     // Return early if the front layer is empty
     if (front_layer.size() == 0) {
@@ -249,7 +249,7 @@ std::vector<solution_kernel*> router::explore_kernel(solution_kernel* source) {
             new_schedule.push_back(node_copy);
         }
         // Apply solution s to copied layout and add swaps to schedule.
-        uint64_t swap_count = 0;
+        uint32_t swap_count = 0;
         for (uint32_t i = 0; i < s.size(); i++) {
             pqubit p1 = s[i].first;
             pqubit p2 = s[i].second;

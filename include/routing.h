@@ -26,7 +26,7 @@ struct solution_kernel {
     std::deque<dagnode> schedule; 
     solution_kernel* parent_kernel;
 
-    uint64_t swap_count;
+    uint32_t swap_count;
     double expected_prob_success;
 };
 
@@ -38,7 +38,7 @@ struct router_params {
 struct minfold_dp {
     std::pair<pqubit,pqubit> swap;
     layout running_layout;
-    std::vector<uint64_t> best_in_row;
+    std::vector<uint32_t> best_in_row;
     double min_score;
 };
 

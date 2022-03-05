@@ -10,7 +10,7 @@ layout::layout(coupling_graph& backend) {
     p2v = std::map<pqubit,vqubit>();
 
     // Create identity layout
-    for (uint64_t i = 0; i < boost::num_vertices(backend); i++) {
+    for (uint32_t i = 0; i < boost::num_vertices(backend); i++) {
         v2p[i] = i;
         p2v[i] = i;
     } 

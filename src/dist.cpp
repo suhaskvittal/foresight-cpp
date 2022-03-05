@@ -17,7 +17,7 @@ void compute_paths_on_arch(
     std::map<std::pair<pqubit,pqubit>,std::vector<path>>* paths_on_arch_p,
     double slack
 ) {
-    uint64_t n = boost::num_vertices(backend);
+    uint32_t n = boost::num_vertices(backend);
     std::vector<std::vector<double>> dist_matrix(n);
     std::map<std::pair<pqubit,pqubit>,std::vector<path>> paths_on_arch;
 
@@ -32,7 +32,7 @@ void compute_paths_on_arch(
     std::map<std::pair<pqubit,pqubit>, path> shortest_path_table;
 #pragma omp parallel for
     // Need to rewrite loop to work with OpenMP.
-    for (uint64_t r = 0; r < n; r++) {
+    for (uint32_t r = 0; r < n; r++) {
         std::vector<double> dist_array(n);
         std::vector<boost_vertex> prev_array(n);
         boost::dijkstra_shortest_paths(
@@ -51,7 +51,7 @@ void compute_paths_on_arch(
         for (pqubit j = 0; j < n; j++) {
             auto src_dst = std::make_pair(i,j);            
             auto dst_src = std::make_pair(j,i);
-            uint16_t src_dst_exists = 0;
+            uint8_t src_dst_exists = 0;
 #pragma omp critical
             {
                 src_dst_exists = shortest_path_table.count(src_dst);
@@ -125,7 +125,9 @@ std::vector<path> get_all_paths_between(
     }
 
     pqubit neighbor_in_shortest_path = shortest_path[1];
+    pqubit antineighbor_in_shortest_path = shortest_path[shortest_path.size()-1];
     auto backend_index = boost::get(boost::vertex_index, backend);
+
     boost::graph_traits<coupling_graph>::adjacency_iterator ai,af;
     boost::tie(ai,af) = boost::adjacent_vertices(src, backend);
     for (; ai != af; ai++) {
@@ -148,6 +150,30 @@ std::vector<path> get_all_paths_between(
             for (uint32_t i = 0; i < subpaths.size(); i++) {
                 path subpath(std::move(subpaths[i]));
                 subpath.insert(subpath.begin(), src);
+                paths.push_back(subpath);
+            }
+        }
+    }
+    boost::tie(ai,af) = boost::adjacent_vertices(dst, backend);
+    for (; ai != af; ai++) {
+        pqubit p = backend_index[*ai];
+        if (p == antineighbor_in_shortest_path) {
+            continue;
+        }
+        double lhs = dist_matrix[src][p] + dist_matrix[p][dst];
+        double rhs = dist_matrix[src][dst] + slack;
+        if (lhs < rhs) {
+            std::vector<path> subpaths = get_all_paths_between(
+                src,
+                p,
+                backend,
+                dist_matrix,
+                slack - lhs,
+                shortest_path_table
+            );
+            for (uint32_t i = 0; i < subpaths.size(); i++) {
+                path subpath(std::move(subpaths[i]));
+                subpath.push_back(dst);
                 paths.push_back(subpath);
             }
         }
