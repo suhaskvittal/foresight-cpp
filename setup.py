@@ -1,8 +1,9 @@
-from distutils.core import setup, Extension
+from setuptools import setup, Extension
+from setuptools.command.build_ext import build_ext
 
 import os
 
-os.environ['CC'] = 'g++-11'
+os.environ['CC'] = 'g++-8'
 
 source_files = [
     'src/circin.cpp',
@@ -13,22 +14,18 @@ source_files = [
     'src/routing_private.cpp',
     'src/pymodule/foresight.i'
 ]
-compiler_options = [
-    '-fopenmp',
-    '-std=c++11',
-    'Iinclude/boost_1_78_0',
-    '-O3'
-]
 
-foresight_module = Extension('_foresight',\
+foresight_module = Extension('foresight',\
                     source_files,\
                     include_dirs=['include', 'include/boost_1_78_0'],
-                    extra_compile_args=['-std=c++11','-O3', '-fopenmp'])
+                    extra_compile_args=['-fopenmp','-std=c++11'])
 
 setup(
     name='ForeSight',
     version='0.1',
     author='Suhas Vittal',
+    author_email='suhaskvittal@gatech.edu or suhaskvittal@gmail.com',
+    url='n/a',
     ext_modules=[foresight_module],
     py_module=['foresight']
 )

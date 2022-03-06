@@ -1,6 +1,7 @@
 IDIR=include
 CC=g++-11
-CFLAGS=-I$(IDIR) -I$(IDIR)/boost_1_78_0 -fopenmp -std=c++11
+CFLAGS=-fopenmp -std=c++11 
+LDFLAGS=-I$(IDIR) -I$(IDIR)/boost_1_78_0
 
 O_BUILD_DIR=bin
 O_DEBUG_DIR=bin/debug
@@ -14,20 +15,24 @@ OBJ_DEBUG=$(patsubst %,$(O_DEBUG_DIR)/%,$(_OBJ))
 
 
 $(O_BUILD_DIR)/%.o: src/%.cpp $(DEPS)
-	$(CC) -c -o $@ $< $(CFLAGS) -O3
+	$(CC) $(CFLAGS) -O3 -c -o $@ $< $(LDFLAGS)
 $(O_DEBUG_DIR)/%.o: src/%.cpp $(DEPS)
-	$(CC) -c -o $@ $< $(CFLAGS) -ggdb3 -Og
+	$(CC) $(CFLAGS) -ggdb3 -c -o $@ $< $(LDFLAGS)
 
 foresight: $(OBJ_BUILD)
-	$(CC) -o $@ $^ $(CFLAGS) -O3
+	$(CC) -o $@ $^
 debug: $(OBJ_DEBUG)
-	$(CC) -o $@ $^ $(CFLAGS) -ggdb3 -Og
+	$(CC) -o $@ $^
+build:
+	python3 setup.py build_ext --inplace
  
 .PHONY: clean
-
 clean:
 	rm -f $(O_BUILD_DIR)/*.o
 	rm -f $(O_DEBUG_DIR)/*.o
 	rm -f foresight debug
 	rm -f src/pymodule/foresight_wrap.*
 	rm -f src/pymodule/foresight.py
+	rm -rf distribution ForeSight.egg-info
+	rm -rf build
+	rm foresight*.so

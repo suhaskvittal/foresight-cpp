@@ -32,7 +32,7 @@ struct solution_kernel {
 
 struct compiled_schedule {
     std::string qasm;
-    uint32_t swap_count;
+    uint32_t swap-count;
 };
 
 struct router_params {
@@ -53,7 +53,7 @@ class router {
 public:
     router(coupling_graph&, router_params&);  
 
-    std::vector<compiled_schedule> run(dag&, boost_dagvertex& top_vertex);
+    std::vector<std::string> run(dag&, boost_dagvertex& top_vertex);
     std::vector<solution_kernel*> explore_kernel(solution_kernel* source);
 private:
     friend class kernel_cmp;

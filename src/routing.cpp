@@ -17,7 +17,7 @@ router::router(coupling_graph& backend, router_params& params) {
     current_solutions = std::vector<solution_kernel*>();
 }
 
-std::vector<std::string> router::run(dag& circuit, boost_dagvertex& top_vertex) {
+std::vector<compiled_schedule> router::run(dag& circuit, boost_dagvertex& top_vertex) {
     this->input_dag = circuit; 
 
     // Setup first solution kernel.
@@ -112,7 +112,7 @@ std::vector<std::string> router::run(dag& circuit, boost_dagvertex& top_vertex) 
         }
         cycle++;
     }
-    std::vector<std::string> qasm_schedules;
+    std::vector<compiled_schedule> schedules;
     uint32_t min_swaps = (uint32_t)-1;
     for (solution_kernel* s : completed_solutions) {
         if (s->swap_count < min_swaps) {
@@ -127,11 +127,12 @@ std::vector<std::string> router::run(dag& circuit, boost_dagvertex& top_vertex) 
             }
             qasm_body += qasm_string + ";\n";
         }
-        qasm_schedules.push_back(qasm_body);
+        compiled_schedule cs = {qasm_body, s->swap_count};
+        schedules.push_back(cs);
         delete s;
     }
     std::cout << "minimum swap schedule is " << min_swaps << "\n";
-    return qasm_schedules;
+    return schedules;
 }
 
 std::vector<solution_kernel*> router::explore_kernel(solution_kernel* source) {

@@ -45,15 +45,13 @@ std::string compile(
     router_params params = {slack, solution_cap};
     router foresight(backend, params); 
 
-    std::vector<std::string> compiled_qasm; 
-
     uint8_t condition_code;
     auto properties = async_add_onto_dag(qasm, circuit, &topvertex, condition_code);
-    compiled_qasm = foresight.run(circuit, topvertex);
-    if (compiled_qasm.size() == 0) {
+    std::vector<compiled_schedule> compiled_circuits = foresight.run(circuit, topvertex);
+    if (compiled_circuits.size() == 0) {
         std::cout << "No solution reported.\n";
         return "no solution reported.";
     } else {
-        return compiled_qasm[0];
+        return compiled_circuits[0].qasm;
     }
 }

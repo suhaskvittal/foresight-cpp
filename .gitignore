@@ -3,3 +3,5 @@ bin/debug/*
 .*.sw*
 src/.*.sw*
 include/.*.sw*
+benchmarking/venv
+benchmarking/venv/*
