@@ -67,6 +67,8 @@ public:
     std::vector<compiled_schedule> run(dag&, boost_dagvertex& top_vertex);
     std::vector<std::shared_ptr<solution_kernel>> explore_kernel(
         std::shared_ptr<solution_kernel> source);
+
+    std::vector<long> memory_by_iteration;
 private:
     friend class kernel_cmp;
 

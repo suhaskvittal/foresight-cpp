@@ -6,6 +6,7 @@
 #include "../include/foresight.h"
 
 #include <math.h>
+#include <sys/resource.h>
 
 router::router(coupling_graph& backend, router_params& params) {
     this->backend = backend;
@@ -18,11 +19,16 @@ router::router(coupling_graph& backend, router_params& params) {
 
     // Initialize everything else to default values.
     current_solutions = std::vector<std::shared_ptr<solution_kernel>>();
+    memory_by_iteration = std::vector<long>();
 }
 
 std::vector<compiled_schedule> router::run(dag& circuit, boost_dagvertex& top_vertex) {
     this->input_dag = circuit; 
 
+    // Clear any old data structures
+    current_solutions.clear();
+    memory_by_iteration.clear();
+     
     // Setup first solution kernel.
     std::map<boost_dagvertex, uint8_t> initial_pred_table;
     std::vector<boost_dagvertex> front_layer;
@@ -53,7 +59,6 @@ std::vector<compiled_schedule> router::run(dag& circuit, boost_dagvertex& top_ve
         1.0,
         this->kernel_type
     };
-    current_solutions.clear();
     current_solutions.push_back(init_kernel);
     
     std::vector<std::shared_ptr<solution_kernel>> completed_solutions;
@@ -62,6 +67,11 @@ std::vector<compiled_schedule> router::run(dag& circuit, boost_dagvertex& top_ve
     uint32_t cycle = 0;
     uint32_t cycle_count = 50;
     while (current_solutions.size() > 0) {
+        // Collect memory usage.
+        struct rusage rs;
+        getrusage(RUSAGE_SELF, &rs);
+        memory_by_iteration.push_back(rs.ru_maxrss); // Measure physical memory
+        
         std::vector<std::shared_ptr<solution_kernel>> next_solutions;
         /*
         if (cycle % cycle_count == 0) {

@@ -16,7 +16,7 @@ std::string read_qasm_file(std::string filename);
 
 compiled_schedule compile(
     std::string qasm,
-    router foresight
+    router& foresight
 );
 
 #endif
