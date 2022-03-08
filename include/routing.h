@@ -36,6 +36,7 @@ struct solution_kernel {
     double expected_prob_success;
 
     uint8_t kernel_type;
+    uint32_t cycles_with_no_progress;
 };
 
 struct compiled_schedule {

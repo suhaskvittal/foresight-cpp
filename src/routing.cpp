@@ -6,6 +6,7 @@
 #include "../include/foresight.h"
 
 #include <math.h>
+#include <sys/time.h>
 #include <sys/resource.h>
 
 router::router(coupling_graph& backend, router_params& params) {
@@ -66,19 +67,25 @@ std::vector<compiled_schedule> router::run(dag& circuit, boost_dagvertex& top_ve
     // Partition all the current solutions across each core.
     uint32_t cycle = 0;
     uint32_t cycle_count = 50;
+    uint32_t last_pruning_cycle = 0;
+    uint32_t pruning_max_cycle = 150;
+
     while (current_solutions.size() > 0) {
+        last_pruning_cycle++;
         // Collect memory usage.
         struct rusage rs;
         getrusage(RUSAGE_SELF, &rs);
         memory_by_iteration.push_back(rs.ru_maxrss); // Measure physical memory
+        if (rs.ru_maxrss > 12L*1024L*1024L*1024L) {
+            last_pruning_cycle = pruning_max_cycle;
+        }
         
         std::vector<std::shared_ptr<solution_kernel>> next_solutions;
-        /*
         if (cycle % cycle_count == 0) {
             std::cout << "iteration " << cycle << ":\n";
             std::cout << "\tnumber of solutions: " << current_solutions.size() << "\n";
+            std::cout << "\t" << rs.ru_maxrss << " | " << (12L*1024L*1024L*1024L) << "\n";
         }
-        */
         // Check if countdown is 0.
         if (completed_solutions.size() > 0 && countdown-- == 0) {
             current_solutions.clear();
@@ -90,15 +97,16 @@ std::vector<compiled_schedule> router::run(dag& circuit, boost_dagvertex& top_ve
             if (i >= current_solutions.size()) continue;
             std::shared_ptr<solution_kernel> k = current_solutions[i];
 
-        /*
+        
 #pragma omp critical
             {
                 if (cycle % cycle_count == 0 && i == 0) {
                     std::cout << "\tnumber of swaps for solution " << i << ": " 
-                        << k->swap_count << " | " << completed_solutions.size() << "\n";
+                        << k->swap_count << " | " << completed_solutions.size() 
+                        << " | " << k->cycles_with_no_progress << "\n";
                 }
             }
-        */
+        
 
             if (k->front_layer.size() == 0) {
                 // We are finished.
@@ -119,10 +127,12 @@ std::vector<compiled_schedule> router::run(dag& circuit, boost_dagvertex& top_ve
                 std::vector<std::shared_ptr<solution_kernel>> children = explore_kernel(k); 
                 while (children.size() > 0) {
                     std::shared_ptr<solution_kernel> child = children.back();
-                    child->parent_kernel = k;
 #pragma omp critical
                     {
-                        next_solutions.push_back(child);
+                        if (child->cycles_with_no_progress < 100) {
+                            child->parent_kernel = k;
+                            next_solutions.push_back(child);
+                        }
                     }
                     children.pop_back();
                 }
@@ -130,8 +140,11 @@ std::vector<compiled_schedule> router::run(dag& circuit, boost_dagvertex& top_ve
         }
 #pragma omp barrier
         // Contract the solution tree once we reach a critical point.
-        if (next_solutions.size() > 2*this->solution_cap) {
+        if (next_solutions.size() > 2*this->solution_cap 
+            || last_pruning_cycle >= pruning_max_cycle) 
+        {
             current_solutions = contract_solutions(next_solutions);
+            last_pruning_cycle = 0;
         } else {
             current_solutions = std::move(next_solutions);
         }
@@ -173,6 +186,7 @@ std::vector<std::shared_ptr<solution_kernel>> router::explore_kernel(
     layout current_layout(source->current_layout);
 
     uint32_t completed_2qubit_gates = source->completed_2qubit_gates;
+    uint32_t cycles_with_no_progress = source->cycles_with_no_progress+1;
 
     do {
         exec_list.clear();
@@ -221,6 +235,7 @@ std::vector<std::shared_ptr<solution_kernel>> router::explore_kernel(
         // Schedule nodes in exec_list.
         for (boost_dagvertex node : exec_list) {
             if (completed_nodes.count(node) == 0) {
+                cycles_with_no_progress = 0;  // reset counter.
                 schedule.push_back(
                     remap_gate_for_layout(this->input_dag[node], current_layout)); 
                 completed_2qubit_gates++;
@@ -263,7 +278,8 @@ std::vector<std::shared_ptr<solution_kernel>> router::explore_kernel(
             source->swap_count,
             completed_2qubit_gates,
             1.0,
-            source->kernel_type
+            source->kernel_type,
+            cycles_with_no_progress
         };
         std::vector<std::shared_ptr<solution_kernel>> singleton{k};
         return singleton;
@@ -337,7 +353,8 @@ std::vector<std::shared_ptr<solution_kernel>> router::explore_kernel(
             swap_count + source->swap_count,
             completed_2qubit_gates,
             1.0,
-            source->kernel_type
+            source->kernel_type,
+            cycles_with_no_progress
         };
         kernels.push_back(k);
     }
