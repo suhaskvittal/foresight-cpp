@@ -8,11 +8,12 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <algorithm>
 
 #include <stdlib.h>
 #include <time.h>
 
-int main(int argc, char* argv[]) {
+int _main(int argc, char* argv[]) {
     srand(time(NULL));
 
     for (int i = 0; i < argc; i++) {
@@ -20,9 +21,12 @@ int main(int argc, char* argv[]) {
     }
     
     std::string qasm_string = read_qasm_file(std::string(argv[1]));
-    std::string compiled_qasm = compile(qasm_string, argv[2], 
-        std::stod(argv[3]), std::stoi(argv[4]));
-    //std::cout << compiled_qasm << "\n";
+
+    coupling_graph backend = load_coupling_graph(argv[2]);
+    router_params params = {std::stod(argv[3]), std::stoi(argv[4]), KERNEL_ALAP}; 
+    router foresight(backend, params);
+
+    compile(qasm_string, foresight); 
     return 0;
 }
 
@@ -38,25 +42,22 @@ std::string read_qasm_file(std::string filename) {
     return qasm_string;
 }
 
-std::string compile(
+compiled_schedule compile(
     std::string qasm,
-    std::string coupling_file,
-    double slack,
-    uint16_t solution_cap)
+    router foresight)
 {
-    coupling_graph backend = load_coupling_graph(coupling_file);
     dag circuit;
     boost_dagvertex topvertex;
-    router_params params = {slack, solution_cap};
-    router foresight(backend, params); 
 
     uint8_t condition_code;
     auto properties = async_add_onto_dag(qasm, circuit, &topvertex, condition_code);
     std::vector<compiled_schedule> compiled_circuits = foresight.run(circuit, topvertex);
     if (compiled_circuits.size() == 0) {
         std::cout << "No solution reported.\n";
-        return "no solution reported.";
+        return {FAILURE_STRING, (uint32_t (-1))};
     } else {
-        return compiled_circuits[0].qasm;
+        compiled_schedule best_schedule = *std::max_element(
+            compiled_circuits.begin(), compiled_circuits.end(), schedule_cmp());
+        return best_schedule;
     }
 }

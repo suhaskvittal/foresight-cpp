@@ -12,7 +12,7 @@
 
 #include <ftw.h>
 
-void compile_benchmarks(std::string folder);
-void run_benchmark(const char*, const struct stat* stats, int flag);
+void compile_benchmarks(std::string folder, std::string coupling_file);
+int run_benchmark(const char*, const struct stat* stats, int flag);
 
 #endif

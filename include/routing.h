@@ -17,8 +17,12 @@
 #include <utility>
 #include <memory>
 
+#define KERNEL_ALAP 0
+#define KERNEL_ASAP 1
+
 struct solution_kernel {
     std::vector<boost_dagvertex> front_layer;
+    std::vector<boost_dagvertex> next_layer;
     std::set<boost_dagvertex> completed_nodes;
     std::map<boost_dagvertex, uint8_t> predecessor_table;
     
@@ -31,7 +35,7 @@ struct solution_kernel {
     uint32_t completed_2qubit_gates;
     double expected_prob_success;
 
-    std::string alloc_point;
+    uint8_t kernel_type;
 };
 
 struct compiled_schedule {
@@ -42,6 +46,7 @@ struct compiled_schedule {
 struct router_params {
     double slack;
     uint16_t solution_cap;
+    uint8_t kernel_type;
 };
 
 struct minfold_dp {
@@ -52,9 +57,11 @@ struct minfold_dp {
 };
 
 typedef std::vector<std::pair<pqubit,pqubit>> fold;
+typedef std::pair<fold, double> labeled_fold;
 
 class router {
 public:
+    router() =default;
     router(coupling_graph&, router_params&);  
 
     std::vector<compiled_schedule> run(dag&, boost_dagvertex& top_vertex);
@@ -66,11 +73,14 @@ private:
     std::vector<std::shared_ptr<solution_kernel>> contract_solutions(
         std::vector<std::shared_ptr<solution_kernel>>&); 
 
+    std::vector<boost_dagvertex> get_next_layer(
+        std::vector<boost_dagvertex>& front_layer,
+        std::map<boost_dagvertex,uint8_t>& pred_table);
     std::vector<std::pair<dagnode,uint8_t>> get_future_gates(
         std::vector<boost_dagvertex>& front_layer,
         std::map<boost_dagvertex, uint8_t>& pred_table,
         std::set<boost_dagvertex>& completed_nodes);
-    std::vector<fold> get_minfolds(
+    std::vector<labeled_fold> get_minfolds(
         dagnode& target_gate,
         layout& current_layout, 
         std::vector<std::pair<dagnode,uint8_t>>& future_gates);
@@ -86,8 +96,9 @@ private:
     std::map<std::pair<pqubit,pqubit>, std::vector<path>> paths_on_arch;
 
     double slack;
-    uint16_t solution_cap;
     double mean_degree;
+    uint16_t solution_cap;
+    uint8_t kernel_type;
 
     std::vector<std::shared_ptr<solution_kernel>> current_solutions;
 };
@@ -115,6 +126,13 @@ public:
     } 
 
     router* callee;
+};
+
+class schedule_cmp {
+public:
+    inline bool operator()(compiled_schedule& s1, compiled_schedule& s2) {
+        return s1.swap_count < s2.swap_count;
+    }
 };
 
 #endif

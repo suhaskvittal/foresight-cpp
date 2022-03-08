@@ -19,13 +19,13 @@ std::vector<std::shared_ptr<solution_kernel>> router::contract_solutions(
     while (fresh_kernels.size() > 0) {
         std::shared_ptr<solution_kernel> k = fresh_kernels.back();
         double cost;
-        /*
+        
         if (k->completed_2qubit_gates == 0) {
             cost = ((double)k->swap_count);
         } else {
             cost = ((double)k->swap_count) / ((double)k->completed_2qubit_gates);
-        }*/
-        cost = ((double)k->swap_count) / ((double)k->completed_nodes.size());
+        }
+        //cost = ((double)k->swap_count) / ((double)k->completed_nodes.size());
         if (cost <= min_cost) {
             if (cost < min_cost) {
                 min_kernels.clear();
@@ -36,7 +36,7 @@ std::vector<std::shared_ptr<solution_kernel>> router::contract_solutions(
         fresh_kernels.pop_back();
     } 
     // If we still have too many kernels, choose a few at random.
-    uint16_t prune_cap = this->solution_cap >= 8 ? this->solution_cap / 8 : 1;
+    uint16_t prune_cap = this->solution_cap >= 8 ? this->solution_cap / 2 : 1;
     if (min_kernels.size() > prune_cap) {
         std::sort(min_kernels.begin(), min_kernels.end(), kernel_cmp(this));
         std::vector<std::shared_ptr<solution_kernel>> filtered_kernels;
@@ -65,6 +65,35 @@ std::vector<std::shared_ptr<solution_kernel>> router::contract_solutions(
     }
 #pragma omp barrier
     return min_kernels;
+}
+
+std::vector<boost_dagvertex> router::get_next_layer(
+    std::vector<boost_dagvertex>& front_layer,
+    std::map<boost_dagvertex,uint8_t>& pred_table)
+{
+    std::vector<boost_dagvertex> incremented;
+
+    std::vector<boost_dagvertex> next_layer;
+    for (boost_dagvertex node : front_layer) {
+        boost::graph_traits<dag>::adjacency_iterator ai,af;
+        boost::tie(ai,af) = boost::adjacent_vertices(node, this->input_dag);
+        for (; ai != af; ai++) {
+            if (pred_table.count(*ai) == 0) {
+                pred_table[*ai] = 0;
+            }
+            pred_table[*ai]++;
+            incremented.push_back(*ai);
+            dagnode nodedata = this->input_dag[*ai];
+            if (nodedata.qargs.size() == pred_table[*ai]) {
+                next_layer.push_back(*ai);
+            }
+        }
+    }
+
+    for (boost_dagvertex node : incremented) {
+        pred_table[node]--;
+    }
+    return next_layer;
 }
 
 std::vector<std::pair<dagnode, uint8_t>> router::get_future_gates( 
@@ -101,7 +130,7 @@ std::vector<std::pair<dagnode, uint8_t>> router::get_future_gates(
                 qubit_depth[v0]++;
                 qubit_depth[v1]++;
                 future_gates.push_back(std::make_pair(nodedata, depth)); 
-                if (is_first_layer) gate_count++;
+                if (is_first_layer==0) gate_count++;
                 has2qop = 1;
             }
 
@@ -132,7 +161,7 @@ std::vector<std::pair<dagnode, uint8_t>> router::get_future_gates(
     return future_gates;
 }
 
-std::vector<fold> router::get_minfolds(
+std::vector<labeled_fold> router::get_minfolds(
     dagnode& target_gate,
     layout& current_layout, 
     std::vector<std::pair<dagnode,uint8_t>>& future_gates)
@@ -144,7 +173,7 @@ std::vector<fold> router::get_minfolds(
     std::vector<path> paths = this->paths_on_arch[src_dst];
 
     double min_score = INFINITY;
-    std::vector<fold> minfolds;
+    std::vector<labeled_fold> minfolds;
 
     minfold_dp DEFAULT_MINFOLD_DP_ENTRY = {
         std::pair<pqubit,pqubit>(0,0),
@@ -219,13 +248,17 @@ std::vector<fold> router::get_minfolds(
             // We use a clock to track which side we are using.
             while (k1 <= i || k2 <= j) {
                 if (clk) {
-                    if (k2 <= j) minfold.push_back(dp[0][k2++].swap);
+                    if (k2 <= j) {
+                        minfold.push_back(dp[0][k2++].swap);
+                    }
                 } else {
-                    if (k1 <= i) minfold.push_back(dp[k1++][0].swap);
+                    if (k1 <= i) {
+                        minfold.push_back(dp[k1++][0].swap);
+                    }
                 }
                 clk = ~clk;
             }
-            minfolds.push_back(minfold);
+            minfolds.push_back(std::make_pair(minfold, min_score));
         }
     }
     return minfolds;
@@ -314,13 +347,14 @@ double router::score_layout(
             pscore += distance;
             pops++;
         } else {
-            sscore += distance * exp2(-depth/sqrt(this->mean_degree));
+            sscore += distance * exp(-depth/sqrt(this->mean_degree));
             sops++;
         }
     }
     double ppart = pops > 0 ? (pscore)/pops : 0;
     double spart = sops > 0 ? sscore/sops : 0;
-    double score = ppart + spart + ((double)fold_size)/(pops+sops);
+    double score = ppart + spart + ((double)fold_size)/(pops+0.5*sops);
+    //std::cout << "score: " << score << ", fold size: " << fold_size << "\n";
     return score;
 }
 

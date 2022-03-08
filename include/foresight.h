@@ -12,11 +12,11 @@
 
 std::string read_qasm_file(std::string filename);
 
-std::string compile(
+#define FAILURE_STRING "no schedule reported."
+
+compiled_schedule compile(
     std::string qasm,
-    std::string coupling_file,
-    double slack,
-    uint16_t solution_cap
+    router foresight
 );
 
 #endif

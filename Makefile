@@ -6,10 +6,10 @@ LDFLAGS=-I$(IDIR) -I$(IDIR)/boost_1_78_0
 O_BUILD_DIR=bin
 O_DEBUG_DIR=bin/debug
 
-_DEPS=coupling.h dag.h routing.h foresight.h defs.h
+_DEPS=coupling.h dag.h routing.h foresight.h defs.h benchmark.h
 DEPS=$(patsubst %,$(IDIR)/%,$(_DEPS))
 
-_OBJ=dist.o layout.o routing.o routing_private.o circin.o main.o
+_OBJ=dist.o layout.o routing.o routing_private.o circin.o foresight.o bench_foresight.o
 OBJ_BUILD=$(patsubst %,$(O_BUILD_DIR)/%,$(_OBJ))
 OBJ_DEBUG=$(patsubst %,$(O_DEBUG_DIR)/%,$(_OBJ))
 
