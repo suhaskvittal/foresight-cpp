@@ -12,7 +12,9 @@
 #include <map>
 
 static std::regex GATE_REGEX("([A-Za-z]+\\(?.*?\\)?)\\s+.+\\s*");
-static std::regex REG_REGEX("([cq])\\[(\\d+)\\]");
+static std::regex REG_REGEX("([cq]reg)\\s+([A-Za-z])\\[(\\d+)\\].+\\s*");
+
+#define GEN_ARG_REGEX(prop) ("("+prop.qreg_name+"|"+prop.creg_name+")\\[(\\d+)\\]")
 
 coupling_graph load_coupling_graph(std::string filename) {
     coupling_graph backend;
@@ -49,7 +51,7 @@ qasm_properties async_add_onto_dag(std::string qasm,
     condition_code = CC_READING;
     while (to != std::string::npos) {
         std::string line = qasm.substr(from, to-from); 
-        dagnode node = parse_instruction(line);
+        dagnode node = parse_instruction(line, prop);
         if (node.gate == "BAD") {
             // Do nothing.
         } else if (node.gate == "qreg") {
@@ -93,23 +95,40 @@ qasm_properties async_add_onto_dag(std::string qasm,
     return prop;
 }
 
-dagnode parse_instruction(std::string line) {
-    std::smatch gate_match;
-    auto match_results = std::regex_match(line, gate_match, GATE_REGEX);
-    if (!match_results) {
+dagnode parse_instruction(std::string line, qasm_properties& properties) {
+    std::vector<vqubit> qargs;
+    std::vector<clbit> cargs;
 
+    std::smatch reg_match;
+    auto reg_results = std::regex_match(line, reg_match, REG_REGEX);
+    if (reg_results) {
+        // This is a register declaration, so we must service it
+        // and update properties.
+        std::string type = reg_match[1];
+        std::string regname = reg_match[2];
+
+        if (type == "qreg") {
+            properties.qreg_name = regname;
+            qargs.push_back(std::stoi(reg_match[3]));
+        } else {
+            properties.creg_name = regname;
+            cargs.push_back(std::stoi(reg_match[3]));
+        }
+        return (dagnode){type, qargs, cargs, 0}; 
+    }
+
+    std::smatch gate_match;
+    auto gate_results = std::regex_match(line, gate_match, GATE_REGEX);
+    if (!gate_results) {
         return (dagnode){"BAD", std::vector<vqubit>(), std::vector<clbit>(), 0};
     }
     std::string gate_name = gate_match[1]; 
 
-    std::smatch reg_match;
-    std::vector<vqubit> qargs;
-    std::vector<clbit> cargs;
-
     std::string curr_line(line); 
-    while (std::regex_search(curr_line, reg_match, REG_REGEX)) {
+    std::regex arg_regex(GEN_ARG_REGEX(properties));
+    while (std::regex_search(curr_line, reg_match, arg_regex)) {
         std::string type = reg_match[1];
-        if (type == "q") {
+        if (type == properties.qreg_name) {
             vqubit v = std::stoi(reg_match[2]);
             qargs.push_back(v);
         } else {

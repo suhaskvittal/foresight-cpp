@@ -10,6 +10,8 @@
 
 #include <iostream>
 
+std::string read_qasm_file(std::string filename);
+
 std::string compile(
     std::string qasm,
     std::string coupling_file,

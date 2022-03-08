@@ -10,27 +10,28 @@
 #include <stdlib.h>
 #include <math.h>
 
-std::vector<solution_kernel*> router::contract_solutions(
-    std::vector<solution_kernel*>& fresh_kernels,
-    std::set<solution_kernel*>& invalid_kernels)
+std::vector<std::shared_ptr<solution_kernel>> router::contract_solutions(
+    std::vector<std::shared_ptr<solution_kernel>>& fresh_kernels)
 {
     // Choose the best kernels in this batch.
     double min_cost = INFINITY;  // should be UINT32_T MAX    
-    std::vector<solution_kernel*> min_kernels;
+    std::vector<std::shared_ptr<solution_kernel>> min_kernels;
     while (fresh_kernels.size() > 0) {
-        solution_kernel* k = fresh_kernels.back();
-        double cost = ((double)k->swap_count) / ((double)k->completed_nodes.size());
+        std::shared_ptr<solution_kernel> k = fresh_kernels.back();
+        double cost;
+        /*
+        if (k->completed_2qubit_gates == 0) {
+            cost = ((double)k->swap_count);
+        } else {
+            cost = ((double)k->swap_count) / ((double)k->completed_2qubit_gates);
+        }*/
+        cost = ((double)k->swap_count) / ((double)k->completed_nodes.size());
         if (cost <= min_cost) {
             if (cost < min_cost) {
-                for (solution_kernel* old_kernel : min_kernels) {
-                    invalid_kernels.insert(old_kernel);
-                }
                 min_kernels.clear();
                 min_cost = cost;
             }
             min_kernels.push_back(k);
-        } else {
-            invalid_kernels.insert(k);
         }
         fresh_kernels.pop_back();
     } 
@@ -38,30 +39,31 @@ std::vector<solution_kernel*> router::contract_solutions(
     uint16_t prune_cap = this->solution_cap >= 8 ? this->solution_cap / 8 : 1;
     if (min_kernels.size() > prune_cap) {
         std::sort(min_kernels.begin(), min_kernels.end(), kernel_cmp(this));
-        std::vector<solution_kernel*> filtered_kernels;
+        std::vector<std::shared_ptr<solution_kernel>> filtered_kernels;
         for (uint16_t i = 0; i < min_kernels.size(); i++) {
-            if (i >= prune_cap) {
-                invalid_kernels.insert(min_kernels[i]);
-            } else {
+            if (i < prune_cap) {
                 filtered_kernels.push_back(min_kernels[i]);
             }
         }
         // Move filtered kernels into min kernels
-        min_kernels = filtered_kernels;
+        min_kernels = std::move(filtered_kernels);
     }
     // Flatten the tree onto these kernels.
-    for (solution_kernel* base_kernel : min_kernels) {
-        solution_kernel* curr = base_kernel->parent_kernel;
+#pragma omp parallel for
+    for (uint16_t i = 0; i < prune_cap; i++) {
+        if (i >= min_kernels.size()) continue;
+        std::shared_ptr<solution_kernel> base_kernel = min_kernels[i];
+        std::shared_ptr<solution_kernel> curr = base_kernel->parent_kernel;
         while (curr != nullptr) {
             for (uint32_t i = curr->schedule.size(); i > 0; i--) {
                 dagnode schedule_node = curr->schedule[i-1];
                 base_kernel->schedule.push_front(schedule_node);
             } 
-            invalid_kernels.insert(curr);
             curr = curr->parent_kernel;
         }
         base_kernel->parent_kernel = nullptr;
     }
+#pragma omp barrier
     return min_kernels;
 }
 

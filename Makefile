@@ -20,9 +20,9 @@ $(O_DEBUG_DIR)/%.o: src/%.cpp $(DEPS)
 	$(CC) $(CFLAGS) -ggdb3 -c -o $@ $< $(LDFLAGS)
 
 foresight: $(OBJ_BUILD)
-	$(CC) -o $@ $^
+	$(CC) -o $@ $^ $(CFLAGS) -O3 $(LDFLAGS)
 debug: $(OBJ_DEBUG)
-	$(CC) -o $@ $^
+	$(CC) -o $@ $^ $(CFLAGS) -Og $(LDFLAGS)
 build:
 	python3 setup.py build_ext --inplace
  

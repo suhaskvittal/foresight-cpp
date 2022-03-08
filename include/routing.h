@@ -15,6 +15,7 @@
 #include <set>
 
 #include <utility>
+#include <memory>
 
 struct solution_kernel {
     std::vector<boost_dagvertex> front_layer;
@@ -24,10 +25,13 @@ struct solution_kernel {
     layout current_layout;
 
     std::deque<dagnode> schedule; 
-    solution_kernel* parent_kernel;
+    std::shared_ptr<solution_kernel> parent_kernel;
 
     uint32_t swap_count;
+    uint32_t completed_2qubit_gates;
     double expected_prob_success;
+
+    std::string alloc_point;
 };
 
 struct compiled_schedule {
@@ -54,12 +58,13 @@ public:
     router(coupling_graph&, router_params&);  
 
     std::vector<compiled_schedule> run(dag&, boost_dagvertex& top_vertex);
-    std::vector<solution_kernel*> explore_kernel(solution_kernel* source);
+    std::vector<std::shared_ptr<solution_kernel>> explore_kernel(
+        std::shared_ptr<solution_kernel> source);
 private:
     friend class kernel_cmp;
 
-    std::vector<solution_kernel*> contract_solutions(
-        std::vector<solution_kernel*>&, std::set<solution_kernel*>& invalid_kernels);
+    std::vector<std::shared_ptr<solution_kernel>> contract_solutions(
+        std::vector<std::shared_ptr<solution_kernel>>&); 
 
     std::vector<std::pair<dagnode,uint8_t>> get_future_gates(
         std::vector<boost_dagvertex>& front_layer,
@@ -70,7 +75,8 @@ private:
         layout& current_layout, 
         std::vector<std::pair<dagnode,uint8_t>>& future_gates);
     std::vector<fold> merge_folds(std::vector<std::vector<fold>>& fold_buckets);
-    double score_layout(uint16_t fold_size, layout&, std::vector<std::pair<dagnode,uint8_t>>& future_gates);
+    double score_layout(uint16_t fold_size, layout&,
+        std::vector<std::pair<dagnode,uint8_t>>& future_gates);
 
     dagnode remap_gate_for_layout(dagnode&, layout&);
 
@@ -83,7 +89,7 @@ private:
     uint16_t solution_cap;
     double mean_degree;
 
-    std::vector<solution_kernel*> current_solutions;
+    std::vector<std::shared_ptr<solution_kernel>> current_solutions;
 };
 
 class kernel_cmp {
@@ -92,7 +98,9 @@ public:
         this->callee = callee;
     }
 
-    inline bool operator()(solution_kernel* k1, solution_kernel* k2) {
+    inline bool operator()(
+        std::shared_ptr<solution_kernel> k1, std::shared_ptr<solution_kernel> k2) 
+    {
         auto future_gates_k1 = callee->get_future_gates(
             k1->front_layer,
             k1->predecessor_table,

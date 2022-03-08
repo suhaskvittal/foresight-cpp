@@ -44,10 +44,13 @@ struct qasm_properties {
     uint32_t qarg_size;
     uint32_t carg_size;
     uint32_t circuit_size;
+
+    std::string qreg_name;
+    std::string creg_name;
 };
 
 qasm_properties async_add_onto_dag(std::string qasm, dag&, boost_dagvertex* topvertex_p, 
     uint8_t& condition_code);
-dagnode parse_instruction(std::string);
+dagnode parse_instruction(std::string, qasm_properties&);
 
 #endif
