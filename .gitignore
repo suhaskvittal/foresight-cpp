@@ -5,3 +5,5 @@ src/.*.sw*
 include/.*.sw*
 benchmarking/venv
 benchmarking/venv/*
+benchmarking/.*.sw*
+foresight
