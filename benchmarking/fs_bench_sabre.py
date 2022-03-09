@@ -22,7 +22,7 @@ if __name__ == '__main__':
     backend = read_arch_file(arch_file)
     sabre = PassManager([
         TrivialLayout(backend),
-        ApplyLayout(backend),
+        ApplyLayout(),
         SabreSwap(backend, heuristic='decay')
     ])
 
@@ -53,7 +53,7 @@ if __name__ == '__main__':
                     swap_count = sabre_circ.count_ops()['swap']
                 else:
                     swap_count = 0
-                if min_swaps == -1 || swap_count < min_swaps:
+                if min_swaps == -1 or swap_count < min_swaps:
                     min_circ = sabre_circ
                     min_swaps = swap_count
                     min_time = (end - start) * 1000  # want time in milliseconds
