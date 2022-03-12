@@ -48,6 +48,7 @@ struct router_params {
     double slack;
     uint16_t solution_cap;
     uint8_t kernel_type;
+    uint8_t debug_mode;
 };
 
 struct minfold_dp {
@@ -65,7 +66,8 @@ public:
     router() =default;
     router(coupling_graph&, router_params&);  
 
-    std::vector<compiled_schedule> run(dag&, boost_dagvertex& top_vertex);
+    std::vector<compiled_schedule> run(dag&, boost_dagvertex& top_vertex, 
+        qasm_properties& circ_properties);
     std::vector<std::shared_ptr<solution_kernel>> explore_kernel(
         std::shared_ptr<solution_kernel> source);
 
@@ -102,33 +104,26 @@ private:
     double mean_degree;
     uint16_t solution_cap;
     uint8_t kernel_type;
+    uint8_t debug_mode;
+
+    qasm_properties circ_properties;
 
     std::vector<std::shared_ptr<solution_kernel>> current_solutions;
 };
 
 class kernel_cmp {
 public:
-    kernel_cmp(router* callee) {
-        this->callee = callee;
+    kernel_cmp(std::map<std::shared_ptr<solution_kernel>,double> s) {
+        score_table = s;
     }
 
     inline bool operator()(
         std::shared_ptr<solution_kernel> k1, std::shared_ptr<solution_kernel> k2) 
     {
-        auto future_gates_k1 = callee->get_future_gates(
-            k1->front_layer,
-            k1->predecessor_table,
-            k1->completed_nodes);
-        auto future_gates_k2 = callee->get_future_gates(
-            k2->front_layer,
-            k2->predecessor_table,
-            k2->completed_nodes);
-        double score_k1 = callee->score_layout(0, k1->current_layout, future_gates_k1);
-        double score_k2 = callee->score_layout(0, k2->current_layout, future_gates_k2);
-        return score_k1 < score_k2;
+        return score_table[k1] < score_table[k2];
     } 
 
-    router* callee;
+    std::map<std::shared_ptr<solution_kernel>,double> score_table;
 };
 
 class schedule_cmp {

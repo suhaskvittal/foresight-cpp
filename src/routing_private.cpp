@@ -6,6 +6,7 @@
 #include "../include/foresight.h"
 
 #include <algorithm>
+#include <parallel/algorithm>
 
 #include <stdlib.h>
 #include <math.h>
@@ -36,11 +37,27 @@ std::vector<std::shared_ptr<solution_kernel>> router::contract_solutions(
         fresh_kernels.pop_back();
     } 
     // If we still have too many kernels, choose a few at random.
-    uint16_t prune_cap = this->solution_cap >= 8 ? this->solution_cap / 2 : 1;
+    uint16_t prune_cap = this->solution_cap >= 8 ? this->solution_cap / 4 : 1;
     if (min_kernels.size() > prune_cap) {
-        std::sort(min_kernels.begin(), min_kernels.end(), kernel_cmp(this));
+        // Compute score table in parallel
+        std::map<std::shared_ptr<solution_kernel>,double> score_table;
+        uint32_t m = min_kernels.size();
+#pragma omp parallel for
+        for (uint32_t i = 0; i < m; i++) {
+            std::shared_ptr<solution_kernel> k = min_kernels[i];
+            auto future_gates = get_future_gates(k->front_layer,
+                k->predecessor_table, k->completed_nodes);
+            double score = score_layout(0, k->current_layout, future_gates);  
+#pragma omp critical
+            {
+                score_table[k] = score;
+            }
+        }
+#pragma omp barrier
+        // Perform parallel sort
+        __gnu_parallel::sort(min_kernels.begin(), min_kernels.end(), kernel_cmp(score_table));
         std::vector<std::shared_ptr<solution_kernel>> filtered_kernels;
-        for (uint16_t i = 0; i < min_kernels.size(); i++) {
+        for (uint16_t i = 0; i < m; i++) {
             if (i < prune_cap) {
                 filtered_kernels.push_back(min_kernels[i]);
             }
@@ -203,7 +220,12 @@ std::vector<labeled_fold> router::get_minfolds(
                 dp[i][j].swap = swap;
                 test_layout.swap(swap.first, swap.second);
                 // Measure score of the layout.
-                double score = score_layout(i+j, test_layout, future_gates);
+                double score;
+                if (i + j < 4) {
+                    score = score_layout(i+j, test_layout, future_gates);
+                } else {
+                    score = INFINITY;
+                }
                 // Add self as best in row (to array) if score <= min_score.
                 if (j == 0 || score < dp[i][j-1].min_score) {
                     dp[i][j].best_in_row.push_back(j); // Already empty.

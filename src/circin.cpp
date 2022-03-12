@@ -12,7 +12,7 @@
 #include <map>
 
 static std::regex GATE_REGEX("([A-Za-z]+\\(?.*?\\)?)\\s+.+\\s*");
-static std::regex REG_REGEX("([cq]reg)\\s+([A-Za-z])\\[(\\d+)\\].+\\s*");
+static std::regex REG_REGEX("([cq]reg)\\s+([A-Za-z]+)\\[(\\d+)\\].+\\s*");
 
 #define GEN_ARG_REGEX(prop) ("("+prop.qreg_name+"|"+prop.creg_name+")\\[(\\d+)\\]")
 
@@ -24,7 +24,7 @@ coupling_graph load_coupling_graph(std::string filename) {
     std::getline(fin, line);
     uint32_t num_qubits = stoi(line);
     for (pqubit i = 0; i < num_qubits; i++) {
-        boost::add_vertex(i, backend); 
+        auto v =boost::add_vertex(i, backend); 
     }
 
     while (std::getline(fin,line)) {
@@ -110,7 +110,7 @@ dagnode parse_instruction(std::string line, qasm_properties& properties) {
         if (type == "qreg") {
             properties.qreg_name = regname;
             qargs.push_back(std::stoi(reg_match[3]));
-        } else {
+        } else if (type == "creg") {
             properties.creg_name = regname;
             cargs.push_back(std::stoi(reg_match[3]));
         }

@@ -30,6 +30,8 @@ if __name__ == '__main__':
         if os.path.isdir(os.path.join(folder,d))]
     for subfolder in benchmarks:
         print('On benchmark %s' % subfolder)
+        if os.path.exists('%s/sabre_time_memory.txt' % subfolder):
+            continue
         time_array = []
         memory_array = []
         for i in range(3):

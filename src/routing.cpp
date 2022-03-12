@@ -15,6 +15,7 @@ router::router(coupling_graph& backend, router_params& params) {
     this->solution_cap = params.solution_cap;
     this->mean_degree = boost::num_edges(backend)/boost::num_vertices(backend);
     this->kernel_type = params.kernel_type;
+    this->debug_mode = params.debug_mode;
     // Compute distance matrix and paths on backend.
     compute_paths_on_arch(backend, &this->dist_matrix, &this->paths_on_arch, params.slack);
 
@@ -23,8 +24,11 @@ router::router(coupling_graph& backend, router_params& params) {
     memory_by_iteration = std::vector<long>();
 }
 
-std::vector<compiled_schedule> router::run(dag& circuit, boost_dagvertex& top_vertex) {
+std::vector<compiled_schedule> router::run(dag& circuit, 
+    boost_dagvertex& top_vertex, qasm_properties& circ_properties)
+{
     this->input_dag = circuit; 
+    this->circ_properties = circ_properties;
 
     // Clear any old data structures
     current_solutions.clear();
@@ -66,9 +70,9 @@ std::vector<compiled_schedule> router::run(dag& circuit, boost_dagvertex& top_ve
     uint8_t countdown = 10;  // After we have found a solution, complete after 10 iterations.
     // Partition all the current solutions across each core.
     uint32_t cycle = 0;
-    uint32_t cycle_count = 50;
+    uint32_t cycle_count = 1;
     uint32_t last_pruning_cycle = 0;
-    uint32_t pruning_max_cycle = 150;
+    uint32_t pruning_max_cycle = (uint32_t)-1;
 
     while (current_solutions.size() > 0) {
         last_pruning_cycle++;
@@ -81,7 +85,7 @@ std::vector<compiled_schedule> router::run(dag& circuit, boost_dagvertex& top_ve
         }
         
         std::vector<std::shared_ptr<solution_kernel>> next_solutions;
-        if (cycle % cycle_count == 0) {
+        if (this->debug_mode && cycle % cycle_count == 0) {
             std::cout << "iteration " << cycle << ":\n";
             std::cout << "\tnumber of solutions: " << current_solutions.size() << "\n";
             std::cout << "\t" << rs.ru_maxrss << " | " << (12L*1024L*1024L*1024L) << "\n";
@@ -96,18 +100,15 @@ std::vector<compiled_schedule> router::run(dag& circuit, boost_dagvertex& top_ve
         for (uint16_t i = 0; i < 2*this->solution_cap; i++) {
             if (i >= current_solutions.size()) continue;
             std::shared_ptr<solution_kernel> k = current_solutions[i];
-
-        
 #pragma omp critical
             {
-                if (cycle % cycle_count == 0 && i == 0) {
+                if (this->debug_mode && cycle % cycle_count == 0 && i == 0) {
                     std::cout << "\tnumber of swaps for solution " << i << ": " 
                         << k->swap_count << " | " << completed_solutions.size() 
-                        << " | " << k->cycles_with_no_progress << "\n";
+                        << " | " << k->cycles_with_no_progress 
+                        << " | " << k->completed_nodes.size() << "\n";
                 }
             }
-        
-
             if (k->front_layer.size() == 0) {
                 // We are finished.
                 // Compress ancestor data onto kernel.
@@ -125,22 +126,38 @@ std::vector<compiled_schedule> router::run(dag& circuit, boost_dagvertex& top_ve
                 }
             } else {
                 std::vector<std::shared_ptr<solution_kernel>> children = explore_kernel(k); 
-                while (children.size() > 0) {
-                    std::shared_ptr<solution_kernel> child = children.back();
+                if (children.size() == 1) {
+                    std::shared_ptr<solution_kernel> child = children[0];
+                    // Delete contents of the parent and replace with child.
+                    // Need to compute new schedule.
+                    std::deque<dagnode> new_schedule(k->schedule);
+                    for (uint32_t j = 0; j < child->schedule.size(); j++) {
+                        new_schedule.push_back(child->schedule[j]);
+                    }
+                    child->schedule = new_schedule;
+                    child->parent_kernel = k->parent_kernel;
 #pragma omp critical
                     {
-                        if (child->cycles_with_no_progress < 100) {
-                            child->parent_kernel = k;
-                            next_solutions.push_back(child);
-                        }
+                        next_solutions.push_back(child);
                     }
-                    children.pop_back();
+                } else {
+                    while (children.size() > 0) {
+                        std::shared_ptr<solution_kernel> child = children.back();
+#pragma omp critical
+                        {
+                            if (child->cycles_with_no_progress < 100) {
+                                child->parent_kernel = k;
+                                next_solutions.push_back(child);
+                            }
+                        }
+                        children.pop_back();
+                    }
                 }
             }
         }
 #pragma omp barrier
         // Contract the solution tree once we reach a critical point.
-        if (next_solutions.size() > 2*this->solution_cap 
+        if (next_solutions.size() > this->solution_cap 
             || last_pruning_cycle >= pruning_max_cycle) 
         {
             current_solutions = contract_solutions(next_solutions);
@@ -159,13 +176,29 @@ std::vector<compiled_schedule> router::run(dag& circuit, boost_dagvertex& top_ve
         std::string qasm_body;
         for (dagnode node : s->schedule) {
             std::string qasm_string = node.gate;  
-            for (uint8_t i = 0; i < node.qargs.size(); i++) {
-                if (i > 0) qasm_string += ",";
-                qasm_string += " q[" + std::to_string(node.qargs[i]) + "]";
+            if (node.gate == "measure") {
+                qasm_string += " " + this->circ_properties.qreg_name + "[" 
+                    + std::to_string(node.qargs[0])
+                    + "] -> " + this->circ_properties.creg_name 
+                    + "[" + std::to_string(node.cargs[0]) + "]";
+            } else {
+                for (uint8_t i = 0; i < node.qargs.size(); i++) {
+                    if (i > 0) qasm_string += ",";
+                    qasm_string += " " + this->circ_properties.qreg_name + 
+                        "[" + std::to_string(node.qargs[i]) + "]";
+                }
             }
             qasm_body += qasm_string + ";\n";
         }
-        compiled_schedule cs = {qasm_body, s->swap_count};
+        // Add header lines to body.
+        std::string qasm_header = "OPENQASM 2.0;\n";
+        qasm_header += "include \"qelib1.inc\";\n";
+        qasm_header += "qreg " + this->circ_properties.qreg_name 
+                        + "[" + std::to_string(this->circ_properties.qarg_size) + "];\n";
+        qasm_header += "creg " + this->circ_properties.creg_name 
+                        + "[" + std::to_string(this->circ_properties.carg_size) + "];\n";
+        std::string full_qasm = qasm_header + qasm_body;
+        compiled_schedule cs = {full_qasm, s->swap_count};
         schedules.push_back(cs);
     }
     //std::cout << "minimum swap schedule is " << min_swaps << "\n";
@@ -236,8 +269,8 @@ std::vector<std::shared_ptr<solution_kernel>> router::explore_kernel(
         for (boost_dagvertex node : exec_list) {
             if (completed_nodes.count(node) == 0) {
                 cycles_with_no_progress = 0;  // reset counter.
-                schedule.push_back(
-                    remap_gate_for_layout(this->input_dag[node], current_layout)); 
+                auto mapped_node = remap_gate_for_layout(this->input_dag[node], current_layout); 
+                schedule.push_back(mapped_node);
                 completed_2qubit_gates++;
             }
             boost::graph_traits<dag>::adjacency_iterator ai,af;

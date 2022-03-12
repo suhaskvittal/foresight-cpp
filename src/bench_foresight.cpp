@@ -12,6 +12,7 @@
 #include <algorithm>
 
 #include <sys/resource.h>
+#include <sys/stat.h>
 
 static router fs_alap;
 static router fs_asap;
@@ -21,13 +22,14 @@ static std::vector<uint8_t> fs_kernels{KERNEL_ALAP,KERNEL_ASAP};
 
 int main(int argc, char* argv[]) {
     compile_benchmarks(argv[1], argv[2]);
+    return 0;
 }
 
 void compile_benchmarks(std::string folder, std::string coupling_file) {
     benchmark_folder = folder;
     // Params for each varation of ForeSight
-    router_params alap_params = {4, 32, KERNEL_ALAP};
-    router_params asap_params = {0, 512, KERNEL_ASAP};
+    router_params alap_params = {2, 64, KERNEL_ALAP, 0};
+    router_params asap_params = {2, 64, KERNEL_ASAP, 0};
     // Get backend
     coupling_graph backend = load_coupling_graph(coupling_file);
     // Initialize both routers.
@@ -42,10 +44,20 @@ void compile_benchmarks(std::string folder, std::string coupling_file) {
 int run_benchmark(const char* c_fname, const struct stat* sb, int flag) {
     std::string filename(c_fname);
 
+    if (filename.find("ignore") != std::string::npos) {
+        return 0;
+    }
+
     if (!(flag & FTW_D) || filename == benchmark_folder) { 
         return 0;  // Only want to examine directories
     }
 
+    std::string measurement_file = filename + "/fs_time_memory.txt";
+    struct stat buf;
+    if (stat(measurement_file.c_str(), &buf) == 0) {
+        std::cout << "Skipping benchmark " << filename << ".\n";
+        return 0;
+    }
 
     std::vector<double> time_array;
     std::vector<double> memory_array;
@@ -76,12 +88,6 @@ int run_benchmark(const char* c_fname, const struct stat* sb, int flag) {
                 mem_by_iter = fs_asap.memory_by_iteration;
             }
             auto t2 = std::chrono::high_resolution_clock::now();
-            if (result.qasm == FAILURE_STRING) {
-                std::cout << "\t\tForeSight " << kernel_name << " failed.\n";
-            } else {
-                std::cout << "\t\t" << kernel_name << " completed with " 
-                    << result.swap_count << " swaps.\n";
-            }
             // Record time and memory usage.
             std::chrono::duration<double, std::milli> elapsed_time = t2-t1;
             time_array.push_back(elapsed_time.count());
@@ -89,6 +95,13 @@ int run_benchmark(const char* c_fname, const struct stat* sb, int flag) {
                 *std::max_element(
                     mem_by_iter.begin(),
                     mem_by_iter.end()));
+            // Print out to console
+            if (result.qasm == FAILURE_STRING) {
+                std::cout << "\t\tForeSight " << kernel_name << " failed.\n";
+            } else {
+                std::cout << "\t\t" << kernel_name << " completed with " 
+                    << result.swap_count << " swaps, time = " << elapsed_time.count() << "\n";
+            }
             // Write qasm file to directory
             std::string output_file = filename + "/foresight_" + kernel_name + "_" 
                 + std::to_string(i) + ".qasm";
@@ -98,7 +111,6 @@ int run_benchmark(const char* c_fname, const struct stat* sb, int flag) {
         }
     }
     // Output the time and memory measurements into a text file.
-    std::string measurement_file = filename + "/fs_time_memory.txt";
     std::ofstream out(measurement_file, std::ofstream::out);
     out << "time,memory\n";
     for (uint8_t kernel_type : fs_kernels) {

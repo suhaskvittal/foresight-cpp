@@ -10,7 +10,8 @@ from qiskit.transpiler.passes import *
 import os
 
 BENCHMARK_PATH = '../benchmarks'
-BASIS_GATES = ['cx','rx','sx','rz']
+#BASIS_GATES = ['cx','x','sx','rz']
+BASIS_GATES=['cx','u1','u2','u3']
 
 def read_arch_file(arch_file):
     reader = open(arch_file, 'r')

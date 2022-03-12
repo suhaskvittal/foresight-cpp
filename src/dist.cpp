@@ -125,7 +125,7 @@ std::vector<path> get_all_paths_between(
     }
 
     pqubit neighbor_in_shortest_path = shortest_path[1];
-    pqubit antineighbor_in_shortest_path = shortest_path[shortest_path.size()-1];
+    pqubit antineighbor_in_shortest_path = shortest_path[shortest_path.size()-2];
     auto backend_index = boost::get(boost::vertex_index, backend);
 
     boost::graph_traits<coupling_graph>::adjacency_iterator ai,af;
@@ -149,14 +149,16 @@ std::vector<path> get_all_paths_between(
             );
             for (uint32_t i = 0; i < subpaths.size(); i++) {
                 path subpath(std::move(subpaths[i]));
-                subpath.insert(subpath.begin(), src);
+//                subpath.insert(subpath.begin(), src);
+                subpath.push_back(src);
                 paths.push_back(subpath);
             }
         }
     }
-    boost::tie(ai,af) = boost::adjacent_vertices(dst, backend);
-    for (; ai != af; ai++) {
-        pqubit p = backend_index[*ai];
+    boost::graph_traits<coupling_graph>::adjacency_iterator bi,bf;
+    boost::tie(bi,bf) = boost::adjacent_vertices(dst, backend);
+    for (; bi != bf; bi++) {
+        pqubit p = backend_index[*bi];
         if (p == antineighbor_in_shortest_path) {
             continue;
         }
@@ -173,7 +175,7 @@ std::vector<path> get_all_paths_between(
             );
             for (uint32_t i = 0; i < subpaths.size(); i++) {
                 path subpath(std::move(subpaths[i]));
-                subpath.push_back(dst);
+                subpath.insert(subpath.begin(), dst);
                 paths.push_back(subpath);
             }
         }
