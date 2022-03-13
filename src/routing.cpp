@@ -319,32 +319,32 @@ std::vector<std::shared_ptr<solution_kernel>> router::explore_kernel(
     }
     // Now, we move to SWAPing.
     auto future_gates = get_future_gates(front_layer, pred, completed_nodes);
-    // Compute best swaps.
-    std::vector<std::pair<pqubit,pqubit>> min_swaps;
+    // Compute folds.
+    // We maintain buckets to track which fold belongs to which gate.
+    std::vector<std::vector<fold>> buckets;
     double min_score = INFINITY;
-    for (boost_dagvertex node : front_layer) {
+    for (uint32_t i = 0; i < front_layer.size(); i++) {
+        boost_dagvertex node = front_layer[i];
         dagnode nodedata = this->input_dag[node];
-        for (vqubit v : nodedata.qargs) {
-            pqubit p1 = current_layout.v2p[v];
-            boost::graph_traits<coupling_graph>::adjacency_iterator ai,af;
-            boost::tie(ai,af) = boost::adjacent_vertices(p1, this->backend);
-            for (; ai != af; ai++) {
-                pqubit p2 = this->backend[*ai];
-                layout test_layout(current_layout);
-                test_layout.swap(p1,p2);
-                double score = score_layout(0, test_layout, future_gates);
-                if (score <= min_score) {
-                    if (score < min_score) {
-                        min_swaps.clear();
-                        min_score = score;
-                    }
-                    min_swaps.push_back(std::make_pair(p1,p2));
+        std::vector<labeled_fold> minfolds = 
+            get_minfolds(nodedata, current_layout, future_gates);
+        std::vector<fold> b;
+        for (labeled_fold lf : minfolds) {
+            if (lf.second <= min_score) {
+                if (lf.second < min_score) {
+                    // Empty all the buckets and the current bucket.
+                    buckets.clear();
+                    b.clear();
+                    min_score = lf.second;
                 }
+                b.push_back(lf.first);
             }
         }
+        buckets.push_back(b);
     }
+    auto final_solutions = merge_folds(buckets); 
     std::vector<std::shared_ptr<solution_kernel>> kernels;
-    for (auto swap : min_swaps) {
+    for (fold s : final_solutions) {
         // Copy data structures.
         layout new_layout(current_layout);
         std::deque<dagnode> new_schedule;
@@ -358,16 +358,21 @@ std::vector<std::shared_ptr<solution_kernel>> router::explore_kernel(
             new_schedule.push_back(node_copy);
         }
         // Apply solution s to copied layout and add swaps to schedule.
-        pqubit p1 = swap.first;
-        pqubit p2 = swap.second;
-        dagnode swap_gate = {
-            "swap",
-            std::vector<vqubit>{new_layout.p2v[p1], new_layout.p2v[p2]},
-            std::vector<clbit>(),
-            1
-        };
-        new_schedule.push_back(remap_gate_for_layout(swap_gate, new_layout));
-        new_layout.swap(p1, p2);
+        uint32_t swap_count = 0;
+        for (uint32_t i = 0; i < s.size(); i++) {
+            pqubit p1 = s[i].first;
+            pqubit p2 = s[i].second;
+            if (p1 == p2) continue;
+            dagnode swap = {
+                "swap",
+                std::vector<vqubit>{new_layout.p2v[p1], new_layout.p2v[p2]},
+                std::vector<clbit>(),
+                1
+            };
+            new_schedule.push_back(remap_gate_for_layout(swap, new_layout));
+            new_layout.swap(p1, p2);
+            swap_count++;
+        }
         // Create solution kernel
         std::shared_ptr<solution_kernel> k(new solution_kernel);
         *k = (solution_kernel){
@@ -378,7 +383,7 @@ std::vector<std::shared_ptr<solution_kernel>> router::explore_kernel(
             new_layout,
             new_schedule,
             source,
-            1 + source->swap_count,
+            swap_count + source->swap_count,
             completed_2qubit_gates,
             1.0,
             source->kernel_type,
