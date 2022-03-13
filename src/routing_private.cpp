@@ -42,6 +42,7 @@ std::vector<std::shared_ptr<solution_kernel>> router::contract_solutions(
         // Compute score table in parallel
         std::map<std::shared_ptr<solution_kernel>,double> score_table;
         uint32_t m = min_kernels.size();
+        /*
 #pragma omp parallel for
         for (uint32_t i = 0; i < m; i++) {
             std::shared_ptr<solution_kernel> k = min_kernels[i];
@@ -59,6 +60,17 @@ std::vector<std::shared_ptr<solution_kernel>> router::contract_solutions(
         std::vector<std::shared_ptr<solution_kernel>> filtered_kernels;
         for (uint16_t i = 0; i < m; i++) {
             if (i < prune_cap) {
+                filtered_kernels.push_back(min_kernels[i]);
+            }
+        }
+        */
+        std::set<uint16_t> random_indices;
+        for (uint16_t i = 0; i < prune_cap; i++) {
+            random_indices.insert(rand() % min_kernels.size());
+        }
+        std::vector<std::shared_ptr<solution_kernel>> filtered_kernels;
+        for (uint16_t i = 0; i < m; i++) {
+            if (random_indices.count(i)) {
                 filtered_kernels.push_back(min_kernels[i]);
             }
         }
@@ -194,6 +206,40 @@ std::vector<labeled_fold> router::get_minfolds(
 
     for (path p : paths) {
         // Compute minfold
+        layout latest_layout(current_layout);
+        fold latest_fold;
+        for (uint32_t i = 1; i < p.size(); i++) {
+            fold f(latest_fold);
+            layout test_layout(latest_layout);
+            if (i == 1) {
+                uint32_t j = p.size() - 1;
+                while (j > i) {
+                    pqubit p1 = p[j];
+                    pqubit p2 = p[j-1];
+                    f.push_back(std::make_pair(p1,p2));
+                    test_layout.swap(p1,p2);
+                    j--;
+                }
+            } else {
+                // Undo this swap and perform the one before it.
+                pqubit u1 = p[i-2], u2 = p[i-1], u3 = p[i];
+                test_layout.swap(u2, u3);  // undo
+                test_layout.swap(u1, u2); 
+                f.pop_back();
+                f.insert(f.begin() + (i-2), std::make_pair(u1,u2));
+            }
+            latest_layout = test_layout;
+            latest_fold = f;
+            // Compute score.
+            double score = score_layout(p.size()-1, test_layout, future_gates);
+            if (score <= min_score) {
+                if (score < min_score) {
+                    minfolds.clear();
+                    min_score = score;
+                }
+                minfolds.push_back(std::make_pair(f, score));
+            }
+        }
     }
     return minfolds;
 }
@@ -285,9 +331,9 @@ double router::score_layout(
             sops++;
         }
     }
-    double ppart = pops > 0 ? (pscore)/pops : 0;
-    double spart = sops > 0 ? sscore/sops : 0;
-    double score = ppart + spart + ((double)fold_size)/(pops+0.5*sops);
+    double ppart = pops > 0 ? pscore : 0;
+    double spart = sops > 0 ? sscore : 0;
+    double score = ppart + spart + fold_size/(pops+sops);
     //std::cout << "score: " << score << ", fold size: " << fold_size << "\n";
     return score;
 }

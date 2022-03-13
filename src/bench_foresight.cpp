@@ -18,7 +18,7 @@ static router fs_alap;
 static router fs_asap;
 static std::string benchmark_folder;
 
-static std::vector<uint8_t> fs_kernels{KERNEL_ALAP,KERNEL_ASAP};
+static std::vector<uint8_t> fs_kernels{KERNEL_ALAP};
 
 int main(int argc, char* argv[]) {
     compile_benchmarks(argv[1], argv[2]);
