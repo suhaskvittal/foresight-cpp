@@ -29,8 +29,10 @@ if __name__ == '__main__':
     benchmarks = [d for d in os.listdir(folder)\
         if os.path.isdir(os.path.join(folder,d))]
     for subfolder in benchmarks:
+        if subfolder == 'ignore':
+            continue
         print('On benchmark %s' % subfolder)
-        if os.path.exists('%s/sabre_time_memory.txt' % subfolder):
+        if os.path.exists('%s/%s/sabre_time_memory.txt' % (folder,subfolder)):
             continue
         time_array = []
         memory_array = []
@@ -70,7 +72,7 @@ if __name__ == '__main__':
             writer.write(min_circ.qasm())
             writer.close()
         # Write statistics to a file as well 
-        writer = open('%s/%s/sabre_time_memory' % (folder,subfolder), 'w')
+        writer = open('%s/%s/sabre_time_memory.txt' % (folder,subfolder), 'w')
         writer.write('SABRE')
         for i in range(3):
             writer.write(' %f,%f' % (time_array[i], memory_array[i]))

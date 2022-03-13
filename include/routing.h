@@ -66,8 +66,7 @@ public:
     router() =default;
     router(coupling_graph&, router_params&);  
 
-    std::vector<compiled_schedule> run(dag&, boost_dagvertex& top_vertex, 
-        qasm_properties& circ_properties);
+    std::vector<compiled_schedule> run(dag&, boost_dagvertex& top_vertex, qasm_properties& circ_properties);
     std::vector<std::shared_ptr<solution_kernel>> explore_kernel(
         std::shared_ptr<solution_kernel> source);
 

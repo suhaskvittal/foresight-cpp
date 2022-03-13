@@ -220,12 +220,7 @@ std::vector<labeled_fold> router::get_minfolds(
                 dp[i][j].swap = swap;
                 test_layout.swap(swap.first, swap.second);
                 // Measure score of the layout.
-                double score;
-                if (i + j < 4) {
-                    score = score_layout(i+j, test_layout, future_gates);
-                } else {
-                    score = INFINITY;
-                }
+                double score = score_layout(i+j, test_layout, future_gates);
                 // Add self as best in row (to array) if score <= min_score.
                 if (j == 0 || score < dp[i][j-1].min_score) {
                     dp[i][j].best_in_row.push_back(j); // Already empty.
