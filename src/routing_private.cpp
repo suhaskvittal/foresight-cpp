@@ -260,7 +260,12 @@ std::vector<labeled_fold> router::get_minfolds(
     return minfolds;
 }
 
-std::vector<fold> router::merge_folds(std::vector<std::vector<labeled_fold>>& fold_buckets) {
+std::vector<fold> router::merge_folds(
+    std::vector<std::vector<labeled_fold>>& fold_buckets,
+    layout& current_layout,
+    std::vector<std::pair<dagnode,uint8_t>>& future_gates,
+    uint8_t kernel_type)
+{
     // Attempt to combine non-intersecting folds.
     // Checking all combinations is exponential time, so we will check on a FCFS basis.
     std::vector<fold> merged_folds;
@@ -279,16 +284,25 @@ std::vector<fold> router::merge_folds(std::vector<std::vector<labeled_fold>>& fo
             break;
         }
         labeled_fold curr_fold;
-        std::map<std::pair<pqubit,pqubit>> swap_map;
+        std::map<std::pair<pqubit,pqubit>,uint32_t> swap_map;
         // Track unused folds.
         std::set<uint32_t> unused_fold_indices;
         // Try to merge the remaining folds if possible.
-        uint32_t j = 0;
+        uint32_t k = 0;
         for (uint32_t i = 0; i < fold_buckets.size(); i++) {
             if (fold_indices.count(i) == 0) continue;
-            labeled_fold candidate_fold = folds[j++]; 
-            std::vector<std::pair<uint32_t,uint32_t>> matching_points;
-            uint32_t prev_matching_point;
+            labeled_fold candidate_fold = folds[k]; 
+            if (k == 0) {
+                curr_fold = candidate_fold;
+                // Initialize swap map.
+                for (uint32_t j = 0; j < candidate_fold.first.size(); j++) {
+                    swap_map[candidate_fold.first[j]] = j;
+                }
+                k++;
+                continue;
+            } 
+            std::deque<std::pair<uint32_t,uint32_t>> matching_points;
+            uint32_t prev_matching_point = 0;
             // Find all the matching points.
             // Matching point (x,y) is such that OLD[x] and NEW[y] have the same swap.
             for (uint32_t j = 0; j < candidate_fold.first.size(); j++) {
@@ -304,43 +318,70 @@ std::vector<fold> router::merge_folds(std::vector<std::vector<labeled_fold>>& fo
             }
 
             fold trial_fold;
+            layout test_layout(current_layout);
+            std::map<std::pair<pqubit,pqubit>,uint32_t> test_swap_map;
             // Interleave swaps.
             uint32_t j1 = 0, j2 = 0;
             uint8_t clk = 0;
             // Track matching point while interleaving
-            std::pair<uint32_t, uint32_t> top_matching_point;
+            std::pair<uint32_t, uint32_t> top_matching_point = std::make_pair(0,0);
             uint8_t is_valid = (matching_points.size() > 0);
             while (j1 < curr_fold.first.size() || j2 < candidate_fold.first.size()) {
+                if (is_valid) {
+                    top_matching_point = matching_points.front();
+                } else {
+                    top_matching_point = std::make_pair(0,0);
+                }
                 uint8_t curr_match_condition = 
-                    !(j1 == top_matching_point.first && j2 < top_matching_point.second);
+                    !(j1 == top_matching_point.first && j2 != top_matching_point.second)
+                        || !is_valid;
                 uint8_t cand_match_condition =
-                    !(j2 == top_matching_point.second && j1 < top_matching_point.first);
+                    !(j2 == top_matching_point.second && j1 != top_matching_point.first)
+                        || !is_valid;
+                std::pair<pqubit,pqubit> s = std::make_pair(0,0);
                 if (clk) {
                     if (j2 < candidate_fold.first.size() && cand_match_condition) {
-                        trial_fold.push_back(candidate_fold.first[j2++]);
+                        if (j2 == top_matching_point.second) {
+                            j1++;
+                            matching_points.pop_front();
+                            is_valid = (matching_points.size() > 0);
+                        }
+                        s = candidate_fold.first[j2++];
                     }
                 } else {
                     if (j1 < curr_fold.first.size() && curr_match_condition) {
-                        trial_fold.push_back(curr_fold.first[j1++]);
+                        if (j1 == top_matching_point.first) {
+                            j2++;
+                            matching_points.pop_front();
+                            is_valid = (matching_points.size() > 0);
+                        }
+                        s = curr_fold.first[j1++];
                     }
+                }
+                if (s.first != s.second) {
+                    test_layout.swap(s.first, s.second);
+                    test_swap_map[s] = trial_fold.size();
+                    trial_fold.push_back(s);
                 }
                 clk = ~clk;
             }
 
-            for (std::pair<pqubit,pqubit> swap : candidate_fold) {
-                if (occupied_qubits.count(swap.first) == 0
-                    && occupied_qubits.count(swap.second) == 0) 
-                {
-                    occupied_qubits_next.insert(swap.first);
-                    occupied_qubits_next.insert(swap.second);
-                    trial_fold.push_back(swap); 
-                } else {
-                    conflict = 1;
-                    break;
-                }
+            double target_score = curr_fold.second + candidate_fold.second;
+            double score = score_layout(
+                trial_fold.size()-1,
+                test_layout,
+                future_gates,
+                kernel_type);
+            if (score > target_score) {
+                unused_fold_indices.insert(i);   
+            } else {
+                curr_fold.first = std::move(trial_fold);
+                curr_fold.second = score;
+                swap_map = std::move(test_swap_map);
             }
+            k++;
         }
-        merged_folds.push_back(curr_fold);
+        merged_folds.push_back(curr_fold.first);
 
         for (uint32_t i : fold_indices) {
             if (unused_fold_indices.count(i)) {
@@ -375,7 +416,7 @@ double router::score_layout(
                 pscore += distance;
                 pops++;
             } else {
-                sscore += distance * exp(-pow(depth/this->mean_degree,2.0));
+                sscore += distance * exp2(-depth/this->mean_degree);
                 sops++;
             }
         } else {
@@ -387,7 +428,7 @@ double router::score_layout(
     double spart = sops > 0 ? sscore/sops : 0;
     double score;
     if (kernel_type == KERNEL_ASAP) {
-        score = (ppart + spart) + fold_size/(pops+0.5*sops);
+        score = (ppart + spart) * fold_size * exp(-(pops+0.5*sops)/this->mean_degree);
     } else {
         score = ppart * fold_size * exp(-(pops+0.5*sops)/this->mean_degree);
     }

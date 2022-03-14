@@ -344,24 +344,28 @@ std::vector<std::shared_ptr<solution_kernel>> router::explore_kernel(
     auto future_gates = get_future_gates(front_layer, pred, completed_nodes);
     // Compute folds.
     // We maintain buckets to track which fold belongs to which gate.
-    std::vector<std::vector<fold>> buckets;
+    std::vector<std::vector<labeled_fold>> buckets;
     double min_score = INFINITY;
-    std::vector<fold> final_solutions;
     for (uint32_t i = 0; i < front_layer.size(); i++) {
         boost_dagvertex node = front_layer[i];
         dagnode nodedata = this->input_dag[node];
         std::vector<labeled_fold> minfolds = 
             get_minfolds(nodedata, current_layout, future_gates, source->kernel_type);
+        std::vector<labeled_fold> b;
         for (auto lf : minfolds) {
             if (lf.second <= min_score) {
                 if (lf.second < min_score) {
                     min_score = lf.second;
-                    final_solutions.clear();
+                    buckets.clear();
+                    b.clear();
                 }
-                final_solutions.push_back(lf.first);
+                b.push_back(lf);
             }
         }
+        buckets.push_back(b);
     }
+    std::vector<fold> final_solutions = merge_folds(
+        buckets, current_layout, future_gates, source->kernel_type);
     std::vector<std::shared_ptr<solution_kernel>> kernels;
     for (fold s : final_solutions) {
         // Copy data structures.

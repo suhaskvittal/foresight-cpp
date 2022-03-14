@@ -93,7 +93,11 @@ private:
         layout& current_layout, 
         std::vector<std::pair<dagnode,uint8_t>>& future_gates,
         uint8_t kernel_type);
-    std::vector<fold> merge_folds(std::vector<std::vector<labeled_fold>>& fold_buckets);
+    std::vector<fold> merge_folds(
+        std::vector<std::vector<labeled_fold>>& fold_buckets,
+        layout& current_layout,
+        std::vector<std::pair<dagnode,uint8_t>>& future_gates,
+        uint8_t kernel_type);
     double score_layout(uint16_t fold_size, layout&,
         std::vector<std::pair<dagnode,uint8_t>>& future_gates,
         uint8_t kernel_type);
