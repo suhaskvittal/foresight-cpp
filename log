@@ -1,0 +1,1343 @@
+arg 0: ./foresight
+arg 1: benchmarks/mapped_circuits/ibm_tokyo/4gt4-v0_73/mapped_circuit_0.qasm
+arg 2: arch/ibm_tokyo.arch
+arg 3: 2
+arg 4: 64
+			iteration 0:
+				number of solutions: 1
+				number of swaps for solution 0: 0
+				number of completed solutions: 0
+				number of cycles with no progress: 0
+				number of completed gates: 0
+	front_layer(routing):
+		cx 12,6
+	front_layer(routing):
+		cx 12,6
+			iteration 1:
+				number of solutions: 6
+				number of swaps for solution 0: 1
+				number of completed solutions: 0
+				number of cycles with no progress: 0
+				number of completed gates: 11
+	front_layer(routing):
+		cx 17,10
+	front_layer(routing):
+		cx 17,10
+	front_layer(routing):
+		cx 17,10
+	front_layer(routing):
+		cx 17,10
+	front_layer(routing):
+		cx 17,10
+	front_layer(routing):
+		cx 17,10
+	front_layer(routing):
+		cx 17,10
+	front_layer(routing):
+		cx 17,10
+	front_layer(routing):
+		cx 17,10
+	front_layer(routing):
+		cx 17,10
+	front_layer(routing):
+		cx 17,10
+	front_layer(routing):
+		cx 17,10
+			iteration 2:
+				number of solutions: 60
+				number of swaps for solution 0: 2
+				number of completed solutions: 0
+				number of cycles with no progress: 0
+				number of completed gates: 23
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+	front_layer(routing):
+		cx 17,11
+				contracting 600 solutions.
+			iteration 3:
+				number of solutions: 16
+				number of swaps for solution 0: 3
+				number of completed solutions: 0
+				number of cycles with no progress: 0
+				number of completed gates: 25
+	front_layer(routing):
+		cx 17,10
+	front_layer(routing):
+		cx 17,10
+	front_layer(routing):
+		cx 17,10
+	front_layer(routing):
+		cx 17,10
+	front_layer(routing):
+		cx 17,10
+	front_layer(routing):
+		cx 17,10
+	front_layer(routing):
+		cx 17,10
+	front_layer(routing):
+		cx 17,10
+	front_layer(routing):
+		cx 17,10
+	front_layer(routing):
+		cx 17,10
+	front_layer(routing):
+		cx 17,10
+	front_layer(routing):
+		cx 17,10
+	front_layer(routing):
+		cx 17,10
+	front_layer(routing):
+		cx 17,10
+	front_layer(routing):
+		cx 17,10
+	front_layer(routing):
+		cx 17,10
+	front_layer(routing):
+		cx 17,10
+	front_layer(routing):
+		cx 17,10
+	front_layer(routing):
+		cx 17,10
+	front_layer(routing):
+		cx 17,10
+	front_layer(routing):
+		cx 17,10
+	front_layer(routing):
+		cx 17,10
+	front_layer(routing):
+		cx 17,10
+	front_layer(routing):
+		cx 17,10
+	front_layer(routing):
+		cx 17,10
+	front_layer(routing):
+		cx 17,10
+	front_layer(routing):
+		cx 17,10
+	front_layer(routing):
+		cx 17,10
+	front_layer(routing):
+		cx 17,10
+	front_layer(routing):
+		cx 17,10
+	front_layer(routing):
+		cx 17,10
+	front_layer(routing):
+		cx 17,10
+				contracting 160 solutions.
+			iteration 4:
+				number of solutions: 16
+				number of swaps for solution 0: 4
+				number of completed solutions: 0
+				number of cycles with no progress: 0
+				number of completed gates: 29
+	front_layer(routing):
+		cx 11,17
+	front_layer(routing):
+		cx 11,17
+	front_layer(routing):
+		cx 11,17
+	front_layer(routing):
+		cx 11,17
+	front_layer(routing):
+		cx 11,17
+	front_layer(routing):
+		cx 11,17
+	front_layer(routing):
+		cx 11,17
+	front_layer(routing):
+		cx 11,17
+	front_layer(routing):
+		cx 11,17
+	front_layer(routing):
+		cx 11,17
+	front_layer(routing):
+		cx 11,17
+	front_layer(routing):
+		cx 11,17
+	front_layer(routing):
+		cx 11,17
+	front_layer(routing):
+		cx 11,17
+	front_layer(routing):
+		cx 11,17
+	front_layer(routing):
+		cx 11,17
+	front_layer(routing):
+		cx 11,17
+	front_layer(routing):
+		cx 11,17
+	front_layer(routing):
+		cx 11,17
+	front_layer(routing):
+		cx 11,17
+	front_layer(routing):
+		cx 11,17
+	front_layer(routing):
+		cx 11,17
+	front_layer(routing):
+		cx 11,17
+	front_layer(routing):
+		cx 11,17
+	front_layer(routing):
+		cx 11,17
+	front_layer(routing):
+		cx 11,17
+	front_layer(routing):
+		cx 11,17
+	front_layer(routing):
+		cx 11,17
+	front_layer(routing):
+		cx 11,17
+	front_layer(routing):
+		cx 11,17
+	front_layer(routing):
+		cx 11,17
+	front_layer(routing):
+		cx 11,17
+				contracting 240 solutions.
+			iteration 5:
+				number of solutions: 16
+				number of swaps for solution 0: 5
+				number of completed solutions: 0
+				number of cycles with no progress: 0
+				number of completed gates: 32
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+				contracting 160 solutions.
+			iteration 6:
+				number of solutions: 16
+				number of swaps for solution 0: 6
+				number of completed solutions: 0
+				number of cycles with no progress: 0
+				number of completed gates: 38
+	front_layer(routing):
+		cx 12,11
+	front_layer(routing):
+		cx 12,11
+	front_layer(routing):
+		cx 12,11
+	front_layer(routing):
+		cx 12,11
+	front_layer(routing):
+		cx 12,11
+	front_layer(routing):
+		cx 12,11
+	front_layer(routing):
+		cx 12,11
+	front_layer(routing):
+		cx 12,11
+	front_layer(routing):
+		cx 12,11
+	front_layer(routing):
+		cx 12,11
+	front_layer(routing):
+		cx 12,11
+	front_layer(routing):
+		cx 12,11
+	front_layer(routing):
+		cx 12,11
+	front_layer(routing):
+		cx 12,11
+	front_layer(routing):
+		cx 12,11
+	front_layer(routing):
+		cx 12,11
+	front_layer(routing):
+		cx 12,11
+	front_layer(routing):
+		cx 12,11
+	front_layer(routing):
+		cx 12,11
+	front_layer(routing):
+		cx 12,11
+	front_layer(routing):
+		cx 12,11
+	front_layer(routing):
+		cx 12,11
+	front_layer(routing):
+		cx 12,11
+	front_layer(routing):
+		cx 12,11
+	front_layer(routing):
+		cx 12,11
+	front_layer(routing):
+		cx 12,11
+	front_layer(routing):
+		cx 12,11
+	front_layer(routing):
+		cx 12,11
+	front_layer(routing):
+		cx 12,11
+	front_layer(routing):
+		cx 12,11
+	front_layer(routing):
+		cx 12,11
+	front_layer(routing):
+		cx 12,11
+				contracting 160 solutions.
+			iteration 7:
+				number of solutions: 16
+				number of swaps for solution 0: 7
+				number of completed solutions: 0
+				number of cycles with no progress: 0
+				number of completed gates: 43
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+				contracting 160 solutions.
+			iteration 8:
+				number of solutions: 16
+				number of swaps for solution 0: 8
+				number of completed solutions: 0
+				number of cycles with no progress: 0
+				number of completed gates: 44
+	front_layer(routing):
+		cx 6,11
+	front_layer(routing):
+		cx 6,11
+	front_layer(routing):
+		cx 6,11
+	front_layer(routing):
+		cx 6,11
+	front_layer(routing):
+		cx 6,11
+	front_layer(routing):
+		cx 6,11
+	front_layer(routing):
+		cx 6,11
+	front_layer(routing):
+		cx 6,11
+	front_layer(routing):
+		cx 6,11
+	front_layer(routing):
+		cx 6,11
+	front_layer(routing):
+		cx 6,11
+	front_layer(routing):
+		cx 6,11
+	front_layer(routing):
+		cx 6,11
+	front_layer(routing):
+		cx 6,11
+	front_layer(routing):
+		cx 6,11
+	front_layer(routing):
+		cx 6,11
+	front_layer(routing):
+		cx 6,11
+	front_layer(routing):
+		cx 6,11
+	front_layer(routing):
+		cx 6,11
+	front_layer(routing):
+		cx 6,11
+	front_layer(routing):
+		cx 6,11
+	front_layer(routing):
+		cx 6,11
+	front_layer(routing):
+		cx 6,11
+	front_layer(routing):
+		cx 6,11
+	front_layer(routing):
+		cx 6,11
+	front_layer(routing):
+		cx 6,11
+	front_layer(routing):
+		cx 6,11
+	front_layer(routing):
+		cx 6,11
+	front_layer(routing):
+		cx 6,11
+	front_layer(routing):
+		cx 6,11
+	front_layer(routing):
+		cx 6,11
+	front_layer(routing):
+		cx 6,11
+				contracting 160 solutions.
+			iteration 9:
+				number of solutions: 16
+				number of swaps for solution 0: 9
+				number of completed solutions: 0
+				number of cycles with no progress: 0
+				number of completed gates: 54
+	front_layer(routing):
+		cx 11,7
+	front_layer(routing):
+		cx 11,7
+	front_layer(routing):
+		cx 11,7
+	front_layer(routing):
+		cx 11,7
+	front_layer(routing):
+		cx 11,7
+	front_layer(routing):
+		cx 11,7
+	front_layer(routing):
+		cx 11,7
+	front_layer(routing):
+		cx 11,7
+	front_layer(routing):
+		cx 11,7
+	front_layer(routing):
+		cx 11,7
+	front_layer(routing):
+		cx 11,7
+	front_layer(routing):
+		cx 11,7
+	front_layer(routing):
+		cx 11,7
+	front_layer(routing):
+		cx 11,7
+	front_layer(routing):
+		cx 11,7
+	front_layer(routing):
+		cx 11,7
+	front_layer(routing):
+		cx 11,7
+	front_layer(routing):
+		cx 11,7
+	front_layer(routing):
+		cx 11,7
+	front_layer(routing):
+		cx 11,7
+	front_layer(routing):
+		cx 11,7
+	front_layer(routing):
+		cx 11,7
+	front_layer(routing):
+		cx 11,7
+	front_layer(routing):
+		cx 11,7
+	front_layer(routing):
+		cx 11,7
+	front_layer(routing):
+		cx 11,7
+	front_layer(routing):
+		cx 11,7
+	front_layer(routing):
+		cx 11,7
+	front_layer(routing):
+		cx 11,7
+	front_layer(routing):
+		cx 11,7
+	front_layer(routing):
+		cx 11,7
+	front_layer(routing):
+		cx 11,7
+				contracting 160 solutions.
+			iteration 10:
+				number of solutions: 16
+				number of swaps for solution 0: 10
+				number of completed solutions: 0
+				number of cycles with no progress: 0
+				number of completed gates: 59
+	front_layer(routing):
+		cx 6,11
+	front_layer(routing):
+		cx 6,11
+	front_layer(routing):
+		cx 6,11
+	front_layer(routing):
+		cx 6,11
+	front_layer(routing):
+		cx 6,11
+	front_layer(routing):
+		cx 6,11
+	front_layer(routing):
+		cx 6,11
+	front_layer(routing):
+		cx 6,11
+	front_layer(routing):
+		cx 6,11
+	front_layer(routing):
+		cx 6,11
+	front_layer(routing):
+		cx 6,11
+	front_layer(routing):
+		cx 6,11
+	front_layer(routing):
+		cx 6,11
+	front_layer(routing):
+		cx 6,11
+	front_layer(routing):
+		cx 6,11
+	front_layer(routing):
+		cx 6,11
+	front_layer(routing):
+		cx 6,11
+	front_layer(routing):
+		cx 6,11
+	front_layer(routing):
+		cx 6,11
+	front_layer(routing):
+		cx 6,11
+	front_layer(routing):
+		cx 6,11
+	front_layer(routing):
+		cx 6,11
+	front_layer(routing):
+		cx 6,11
+	front_layer(routing):
+		cx 6,11
+	front_layer(routing):
+		cx 6,11
+	front_layer(routing):
+		cx 6,11
+	front_layer(routing):
+		cx 6,11
+	front_layer(routing):
+		cx 6,11
+	front_layer(routing):
+		cx 6,11
+	front_layer(routing):
+		cx 6,11
+	front_layer(routing):
+		cx 6,11
+	front_layer(routing):
+		cx 6,11
+				contracting 160 solutions.
+			iteration 11:
+				number of solutions: 16
+				number of swaps for solution 0: 11
+				number of completed solutions: 0
+				number of cycles with no progress: 0
+				number of completed gates: 60
+	front_layer(routing):
+		cx 12,11
+	front_layer(routing):
+		cx 12,11
+	front_layer(routing):
+		cx 12,11
+	front_layer(routing):
+		cx 12,11
+	front_layer(routing):
+		cx 12,11
+	front_layer(routing):
+		cx 12,11
+	front_layer(routing):
+		cx 12,11
+	front_layer(routing):
+		cx 12,11
+	front_layer(routing):
+		cx 12,11
+	front_layer(routing):
+		cx 12,11
+	front_layer(routing):
+		cx 12,11
+	front_layer(routing):
+		cx 12,11
+	front_layer(routing):
+		cx 12,11
+	front_layer(routing):
+		cx 12,11
+	front_layer(routing):
+		cx 12,11
+	front_layer(routing):
+		cx 12,11
+	front_layer(routing):
+		cx 12,11
+	front_layer(routing):
+		cx 12,11
+	front_layer(routing):
+		cx 12,11
+	front_layer(routing):
+		cx 12,11
+	front_layer(routing):
+		cx 12,11
+	front_layer(routing):
+		cx 12,11
+	front_layer(routing):
+		cx 12,11
+	front_layer(routing):
+		cx 12,11
+	front_layer(routing):
+		cx 12,11
+	front_layer(routing):
+		cx 12,11
+	front_layer(routing):
+		cx 12,11
+	front_layer(routing):
+		cx 12,11
+	front_layer(routing):
+		cx 12,11
+	front_layer(routing):
+		cx 12,11
+	front_layer(routing):
+		cx 12,11
+	front_layer(routing):
+		cx 12,11
+				contracting 160 solutions.
+			iteration 12:
+				number of solutions: 16
+				number of swaps for solution 0: 12
+				number of completed solutions: 0
+				number of cycles with no progress: 0
+				number of completed gates: 68
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+				contracting 160 solutions.
+			iteration 13:
+				number of solutions: 16
+				number of swaps for solution 0: 13
+				number of completed solutions: 0
+				number of cycles with no progress: 0
+				number of completed gates: 70
+	front_layer(routing):
+		cx 12,11
+	front_layer(routing):
+		cx 12,11
+	front_layer(routing):
+		cx 12,11
+	front_layer(routing):
+		cx 12,11
+	front_layer(routing):
+		cx 12,11
+	front_layer(routing):
+		cx 12,11
+	front_layer(routing):
+		cx 12,11
+	front_layer(routing):
+		cx 12,11
+	front_layer(routing):
+		cx 12,11
+	front_layer(routing):
+		cx 12,11
+	front_layer(routing):
+		cx 12,11
+	front_layer(routing):
+		cx 12,11
+	front_layer(routing):
+		cx 12,11
+	front_layer(routing):
+		cx 12,11
+	front_layer(routing):
+		cx 12,11
+	front_layer(routing):
+		cx 12,11
+	front_layer(routing):
+		cx 12,11
+	front_layer(routing):
+		cx 12,11
+	front_layer(routing):
+		cx 12,11
+	front_layer(routing):
+		cx 12,11
+	front_layer(routing):
+		cx 12,11
+	front_layer(routing):
+		cx 12,11
+	front_layer(routing):
+		cx 12,11
+	front_layer(routing):
+		cx 12,11
+	front_layer(routing):
+		cx 12,11
+	front_layer(routing):
+		cx 12,11
+	front_layer(routing):
+		cx 12,11
+	front_layer(routing):
+		cx 12,11
+	front_layer(routing):
+		cx 12,11
+	front_layer(routing):
+		cx 12,11
+	front_layer(routing):
+		cx 12,11
+	front_layer(routing):
+		cx 12,11
+				contracting 160 solutions.
+			iteration 14:
+				number of solutions: 16
+				number of swaps for solution 0: 14
+				number of completed solutions: 0
+				number of cycles with no progress: 0
+				number of completed gates: 75
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+	front_layer(routing):
+		cx 10,12
+				contracting 160 solutions.
+			iteration 15:
+				number of solutions: 16
+				number of swaps for solution 0: 15
+				number of completed solutions: 0
+				number of cycles with no progress: 0
+				number of completed gates: 76
+	front_layer(routing):
+		cx 11,7
+	front_layer(routing):
+		cx 11,7
+	front_layer(routing):
+		cx 11,7
+	front_layer(routing):
+		cx 11,7
+	front_layer(routing):
+		cx 11,7
+	front_layer(routing):
+		cx 11,7
+	front_layer(routing):
+		cx 11,7
+	front_layer(routing):
+		cx 11,7
+	front_layer(routing):
+		cx 11,7
+	front_layer(routing):
+		cx 11,7
+	front_layer(routing):
+		cx 11,7
+	front_layer(routing):
+		cx 11,7
+	front_layer(routing):
+		cx 11,7
+	front_layer(routing):
+		cx 11,7
+	front_layer(routing):
+		cx 11,7
+	front_layer(routing):
+		cx 11,7
+	front_layer(routing):
+		cx 11,7
+	front_layer(routing):
+		cx 11,7
+	front_layer(routing):
+		cx 11,7
+	front_layer(routing):
+		cx 11,7
+	front_layer(routing):
+		cx 11,7
+	front_layer(routing):
+		cx 11,7
+	front_layer(routing):
+		cx 11,7
+	front_layer(routing):
+		cx 11,7
+	front_layer(routing):
+		cx 11,7
+	front_layer(routing):
+		cx 11,7
+	front_layer(routing):
+		cx 11,7
+	front_layer(routing):
+		cx 11,7
+	front_layer(routing):
+		cx 11,7
+	front_layer(routing):
+		cx 11,7
+	front_layer(routing):
+		cx 11,7
+	front_layer(routing):
+		cx 11,7
+				contracting 160 solutions.
+			iteration 16:
+				number of solutions: 16
+				number of swaps for solution 0: 16
+				number of completed solutions: 0
+				number of cycles with no progress: 0
+				number of completed gates: 85
+	front_layer(routing):
+		cx 6,11
+	front_layer(routing):
+		cx 6,11
+	front_layer(routing):
+		cx 6,11
+	front_layer(routing):
+		cx 6,11
+	front_layer(routing):
+		cx 6,11
+	front_layer(routing):
+		cx 6,11
+	front_layer(routing):
+		cx 6,11
+	front_layer(routing):
+		cx 6,11
+	front_layer(routing):
+		cx 6,11
+	front_layer(routing):
+		cx 6,11
+	front_layer(routing):
+		cx 6,11
+	front_layer(routing):
+		cx 6,11
+	front_layer(routing):
+		cx 6,11
+	front_layer(routing):
+		cx 6,11
+	front_layer(routing):
+		cx 6,11
+	front_layer(routing):
+		cx 6,11
+	front_layer(routing):
+		cx 6,11
+	front_layer(routing):
+		cx 6,11
+	front_layer(routing):
+		cx 6,11
+	front_layer(routing):
+		cx 6,11
+	front_layer(routing):
+		cx 6,11
+	front_layer(routing):
+		cx 6,11
+	front_layer(routing):
+		cx 6,11
+	front_layer(routing):
+		cx 6,11
+	front_layer(routing):
+		cx 6,11
+	front_layer(routing):
+		cx 6,11
+	front_layer(routing):
+		cx 6,11
+	front_layer(routing):
+		cx 6,11
+	front_layer(routing):
+		cx 6,11
+	front_layer(routing):
+		cx 6,11
+	front_layer(routing):
+		cx 6,11
+	front_layer(routing):
+		cx 6,11
+				contracting 160 solutions.
+			iteration 17:
+				number of solutions: 16
+				number of swaps for solution 0: 17
+				number of completed solutions: 0
+				number of cycles with no progress: 0
+				number of completed gates: 87
+	front_layer(routing):
+		cx 11,7
+	front_layer(routing):
+		cx 11,7
+	front_layer(routing):
+		cx 11,7
+	front_layer(routing):
+		cx 11,7
+	front_layer(routing):
+		cx 11,7
+	front_layer(routing):
+		cx 11,7
+	front_layer(routing):
+		cx 11,7
+	front_layer(routing):
+		cx 11,7
+	front_layer(routing):
+		cx 11,7
+	front_layer(routing):
+		cx 11,7
+	front_layer(routing):
+		cx 11,7
+	front_layer(routing):
+		cx 11,7
+	front_layer(routing):
+		cx 11,7
+	front_layer(routing):
+		cx 11,7
+	front_layer(routing):
+		cx 11,7
+	front_layer(routing):
+		cx 11,7
+	front_layer(routing):
+		cx 11,7
+	front_layer(routing):
+		cx 11,7
+	front_layer(routing):
+		cx 11,7
+	front_layer(routing):
+		cx 11,7
+	front_layer(routing):
+		cx 11,7
+	front_layer(routing):
+		cx 11,7
+	front_layer(routing):
+		cx 11,7
+	front_layer(routing):
+		cx 11,7
+	front_layer(routing):
+		cx 11,7
+	front_layer(

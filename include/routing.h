@@ -19,6 +19,7 @@
 
 #define KERNEL_ALAP 0
 #define KERNEL_ASAP 1
+#define KERNEL_HYBR 2
 
 struct solution_kernel {
     std::vector<boost_dagvertex> front_layer;
@@ -34,6 +35,7 @@ struct solution_kernel {
     uint32_t swap_count;
     uint32_t completed_2qubit_gates;
     double expected_prob_success;
+    double solution_score;
 
     uint8_t kernel_type;
     uint32_t cycles_with_no_progress;
@@ -80,7 +82,8 @@ private:
 
     std::vector<boost_dagvertex> get_next_layer(
         std::vector<boost_dagvertex>& front_layer,
-        std::map<boost_dagvertex,uint8_t>& pred_table);
+        std::map<boost_dagvertex,uint8_t>& pred_table,
+        std::set<boost_dagvertex>& completed_nodes);
     std::vector<std::pair<dagnode,uint8_t>> get_future_gates(
         std::vector<boost_dagvertex>& front_layer,
         std::map<boost_dagvertex, uint8_t>& pred_table,
@@ -88,10 +91,12 @@ private:
     std::vector<labeled_fold> get_minfolds(
         dagnode& target_gate,
         layout& current_layout, 
-        std::vector<std::pair<dagnode,uint8_t>>& future_gates);
+        std::vector<std::pair<dagnode,uint8_t>>& future_gates,
+        uint8_t kernel_type);
     std::vector<fold> merge_folds(std::vector<std::vector<fold>>& fold_buckets);
     double score_layout(uint16_t fold_size, layout&,
-        std::vector<std::pair<dagnode,uint8_t>>& future_gates);
+        std::vector<std::pair<dagnode,uint8_t>>& future_gates,
+        uint8_t kernel_type);
 
     dagnode remap_gate_for_layout(dagnode&, layout&);
 

@@ -23,16 +23,11 @@ foresight: $(OBJ_BUILD)
 	$(CC) -o $@ $^ $(CFLAGS) -O3 $(LDFLAGS)
 debug: $(OBJ_DEBUG)
 	$(CC) -o $@ $^ $(CFLAGS) -Og $(LDFLAGS)
-build:
-	python3 setup.py build_ext --inplace
+test: $(OBJ_BUILD)
+	$(CC) -o $@ $^ $(CFLAGS) -O3 $(LDFLAGS) 
  
 .PHONY: clean
 clean:
 	rm -f $(O_BUILD_DIR)/*.o
 	rm -f $(O_DEBUG_DIR)/*.o
-	rm -f foresight debug
-	rm -f src/pymodule/foresight_wrap.*
-	rm -f src/pymodule/foresight.py
-	rm -rf distribution ForeSight.egg-info
-	rm -rf build
-	rm foresight*.so
+	rm -f foresight debug test

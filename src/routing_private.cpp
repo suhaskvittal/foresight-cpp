@@ -40,6 +40,7 @@ std::vector<std::shared_ptr<solution_kernel>> router::contract_solutions(
     uint16_t prune_cap = this->solution_cap >= 8 ? this->solution_cap / 4 : 1;
     if (min_kernels.size() > prune_cap) {
         // Compute score table in parallel
+        /*
         std::map<std::shared_ptr<solution_kernel>,double> score_table;
         uint32_t m = min_kernels.size();
 #pragma omp parallel for
@@ -56,12 +57,21 @@ std::vector<std::shared_ptr<solution_kernel>> router::contract_solutions(
 #pragma omp barrier
         // Perform parallel sort
         __gnu_parallel::sort(min_kernels.begin(), min_kernels.end(), kernel_cmp(score_table));
+        */
         std::vector<std::shared_ptr<solution_kernel>> filtered_kernels;
+        std::set<uint16_t> random_indices;
+        while (random_indices.size() < prune_cap) {
+            random_indices.insert(rand() % min_kernels.size());
+        }
+        for (uint16_t i : random_indices) {
+            filtered_kernels.push_back(min_kernels[i]);
+        }
+        /*
         for (uint16_t i = 0; i < m; i++) {
             if (i < prune_cap) {
                 filtered_kernels.push_back(min_kernels[i]);
             }
-        }
+        }*/
         // Move filtered kernels into min kernels
         min_kernels = std::move(filtered_kernels);
     }
@@ -86,23 +96,31 @@ std::vector<std::shared_ptr<solution_kernel>> router::contract_solutions(
 
 std::vector<boost_dagvertex> router::get_next_layer(
     std::vector<boost_dagvertex>& front_layer,
-    std::map<boost_dagvertex,uint8_t>& pred_table)
+    std::map<boost_dagvertex,uint8_t>& pred_table,
+    std::set<boost_dagvertex>& completed_nodes)
 {
     std::vector<boost_dagvertex> incremented;
 
     std::vector<boost_dagvertex> next_layer;
+    std::set<boost_dagvertex> visited;
     for (boost_dagvertex node : front_layer) {
         boost::graph_traits<dag>::adjacency_iterator ai,af;
         boost::tie(ai,af) = boost::adjacent_vertices(node, this->input_dag);
         for (; ai != af; ai++) {
+            if (visited.count(*ai) > 0) {
+                continue;
+            }
             if (pred_table.count(*ai) == 0) {
                 pred_table[*ai] = 0;
             }
-            pred_table[*ai]++;
-            incremented.push_back(*ai);
+            if (completed_nodes.count(node) == 0) {
+                pred_table[*ai]++;
+                incremented.push_back(*ai);
+            }
             dagnode nodedata = this->input_dag[*ai];
             if (nodedata.qargs.size() == pred_table[*ai]) {
                 next_layer.push_back(*ai);
+                visited.insert(*ai);
             }
         }
     }
@@ -181,7 +199,8 @@ std::vector<std::pair<dagnode, uint8_t>> router::get_future_gates(
 std::vector<labeled_fold> router::get_minfolds(
     dagnode& target_gate,
     layout& current_layout, 
-    std::vector<std::pair<dagnode,uint8_t>>& future_gates)
+    std::vector<std::pair<dagnode,uint8_t>>& future_gates,
+    uint8_t kernel_type)
 {
     pqubit src = current_layout.v2p[target_gate.qargs[0]];
     pqubit dst = current_layout.v2p[target_gate.qargs[1]];
@@ -189,7 +208,6 @@ std::vector<labeled_fold> router::get_minfolds(
     auto src_dst = std::make_pair(src,dst);
     std::vector<path> paths = this->paths_on_arch[src_dst];
 
-    double min_score = INFINITY;
     std::vector<labeled_fold> minfolds;
 
     minfold_dp DEFAULT_MINFOLD_DP_ENTRY = {
@@ -200,6 +218,7 @@ std::vector<labeled_fold> router::get_minfolds(
     };
 
     for (path p : paths) {
+        double min_score = INFINITY;
         // Construct minfold DP.
         uint32_t r = p.size();
         std::vector<std::vector<minfold_dp>> dp(r,
@@ -220,12 +239,7 @@ std::vector<labeled_fold> router::get_minfolds(
                 dp[i][j].swap = swap;
                 test_layout.swap(swap.first, swap.second);
                 // Measure score of the layout.
-                double score;
-                if (i + j < 4) {
-                    score = score_layout(i+j, test_layout, future_gates);
-                } else {
-                    score = INFINITY;
-                }
+                double score = score_layout(i+j, test_layout, future_gates, kernel_type);
                 // Add self as best in row (to array) if score <= min_score.
                 if (j == 0 || score < dp[i][j-1].min_score) {
                     dp[i][j].best_in_row.push_back(j); // Already empty.
@@ -233,9 +247,9 @@ std::vector<labeled_fold> router::get_minfolds(
                 } else {
                     // Copy best in row array.
                     dp[i][j].best_in_row = std::vector<uint32_t>(dp[i][j-1].best_in_row);
-                    if (score == dp[i][j-1].min_score) {
-                        dp[i][j].best_in_row.push_back(j);
-                    }
+//                    if (score == dp[i][j-1].min_score) {
+//                        dp[i][j].best_in_row.push_back(j);
+//                    }
                     dp[i][j].min_score = dp[i][j-1].min_score;
                 }
                 dp[i][j].running_layout = test_layout;
@@ -251,7 +265,6 @@ std::vector<labeled_fold> router::get_minfolds(
             if (dp_entry.min_score <= min_score) {
                 if (dp_entry.min_score < min_score) { 
                     best_entry_locs.clear();
-                    minfolds.clear(); 
                     min_score = dp_entry.min_score;
                 }
                 for (uint32_t k : dp_entry.best_in_row) {
@@ -351,32 +364,42 @@ std::vector<fold> router::merge_folds(std::vector<std::vector<fold>>& fold_bucke
 double router::score_layout(
     uint16_t fold_size,
     layout& current_layout,
-    std::vector<std::pair<dagnode,uint8_t>>& future_gates)
+    std::vector<std::pair<dagnode,uint8_t>>& future_gates,
+    uint8_t kernel_type)
 {
     double pscore = 0.0;
     double sscore = 0.0;
-    uint8_t pops = 0;
-    uint8_t sops = 0;
+    double pops = 0;
+    double sops = 0;
 
     for (std::pair<dagnode,uint8_t> labeled_node : future_gates) {
         dagnode node = labeled_node.first;
-        uint8_t depth = labeled_node.second;
+        double depth = (double)labeled_node.second;
         pqubit p0 = current_layout.v2p[node.qargs[0]];
         pqubit p1 = current_layout.v2p[node.qargs[1]];
         double distance = this->dist_matrix[p0][p1];
 
-        if (depth == 0) {
-            pscore += distance;
-            pops++;
+        if (kernel_type == KERNEL_ASAP) {
+            if (labeled_node.second == 0) {
+                pscore += distance;
+                pops++;
+            } else {
+                sscore += distance * 0.5 * exp2(-depth/this->mean_degree);
+                sops++;
+            }
         } else {
-            sscore += distance * exp(-depth/sqrt(this->mean_degree));
-            sops++;
+            pscore += distance * exp(-pow(depth/this->mean_degree,2.0));
+            pops++;
         }
     }
     double ppart = pops > 0 ? (pscore)/pops : 0;
     double spart = sops > 0 ? sscore/sops : 0;
-    double score = ppart + spart + ((double)fold_size)/(pops+0.5*sops);
-    //std::cout << "score: " << score << ", fold size: " << fold_size << "\n";
+    double score;
+    if (kernel_type == KERNEL_ASAP) {
+        score = (ppart + spart) + fold_size/(pops+0.5*sops);
+    } else {
+        score = ppart * fold_size * exp(-(pops+0.5*sops)/this->mean_degree);
+    }
     return score;
 }
 

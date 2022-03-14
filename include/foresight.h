@@ -19,4 +19,10 @@ compiled_schedule compile(
     router& foresight
 );
 
+compiled_schedule compile_from_dag(
+    dag& input_dag,
+    boost_dagvertex& topvertex, 
+    qasm_properties& prop,
+    router& foresight);
+
 #endif

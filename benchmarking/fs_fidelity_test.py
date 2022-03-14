@@ -13,6 +13,8 @@ qasmsim = Aer.get_backend('qasm_simulator')
 
 if __name__ == '__main__':
     orig_file = '../benchmarks/mapped_circuits/ibm_tokyo/sat_n11/mapped_circuit_0.qasm'
+    #orig_file = '../benchmarks/mapped_circuits/ibm_tokyo/4gt4-v0_73/mapped_circuit_0.qasm'
+    #orig_file = '../benchmarks/mapped_circuits/ibm_tokyo/bv_n14/mapped_circuit_0.qasm'
     test_file = '../test_circ.qasm'
 
     ibm_tokyo = read_arch_file('../arch/ibm_tokyo.arch')

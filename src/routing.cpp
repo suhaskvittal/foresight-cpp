@@ -42,19 +42,22 @@ std::vector<compiled_schedule> router::run(dag& circuit,
     boost::tie(ai,af) = boost::adjacent_vertices(top_vertex, circuit);
     for (; ai != af; ai++) {
         boost_dagvertex v = *ai;
-        front_layer.push_back(v);
-        if (initial_pred_table.count(*ai) == 0) {
-            initial_pred_table[*ai] = 0;
+        if (initial_pred_table.count(v) == 0) {
+            initial_pred_table[v] = 0;
         }
-        initial_pred_table[*ai]++;
+        initial_pred_table[v]++;
+        if (initial_pred_table[v] == this->input_dag[v].qargs.size()) {
+            front_layer.push_back(v);
+        }
     }
 
     layout trivial_layout(this->backend);
     std::shared_ptr<solution_kernel> init_kernel(new solution_kernel);
+    std::set<boost_dagvertex> completed_nodes;
     *init_kernel = (solution_kernel){
         front_layer,
-        get_next_layer(front_layer, initial_pred_table),
-        std::set<boost_dagvertex>(),
+        get_next_layer(front_layer, initial_pred_table, completed_nodes),
+        completed_nodes,
         initial_pred_table,
         trivial_layout,
         std::deque<dagnode>(),
@@ -62,6 +65,7 @@ std::vector<compiled_schedule> router::run(dag& circuit,
         0,
         0,
         1.0,
+        0.0,
         this->kernel_type
     };
     current_solutions.push_back(init_kernel);
@@ -70,25 +74,18 @@ std::vector<compiled_schedule> router::run(dag& circuit,
     uint8_t countdown = 10;  // After we have found a solution, complete after 10 iterations.
     // Partition all the current solutions across each core.
     uint32_t cycle = 0;
-    uint32_t cycle_count = 1;
-    uint32_t last_pruning_cycle = 0;
-    uint32_t pruning_max_cycle = (uint32_t)-1;
+    uint32_t cycle_count = 10;
 
     while (current_solutions.size() > 0) {
-        last_pruning_cycle++;
         // Collect memory usage.
         struct rusage rs;
         getrusage(RUSAGE_SELF, &rs);
         memory_by_iteration.push_back(rs.ru_maxrss); // Measure physical memory
-        if (rs.ru_maxrss > 12L*1024L*1024L*1024L) {
-            last_pruning_cycle = pruning_max_cycle;
-        }
         
         std::vector<std::shared_ptr<solution_kernel>> next_solutions;
         if (this->debug_mode && cycle % cycle_count == 0) {
-            std::cout << "iteration " << cycle << ":\n";
-            std::cout << "\tnumber of solutions: " << current_solutions.size() << "\n";
-            std::cout << "\t" << rs.ru_maxrss << " | " << (12L*1024L*1024L*1024L) << "\n";
+            std::cout << "\t\t\titeration " << cycle << ":\n";
+            std::cout << "\t\t\t\tnumber of solutions: " << current_solutions.size() << "\n";
         }
         // Check if countdown is 0.
         if (completed_solutions.size() > 0 && countdown-- == 0) {
@@ -103,10 +100,13 @@ std::vector<compiled_schedule> router::run(dag& circuit,
 #pragma omp critical
             {
                 if (this->debug_mode && cycle % cycle_count == 0 && i == 0) {
-                    std::cout << "\tnumber of swaps for solution " << i << ": " 
-                        << k->swap_count << " | " << completed_solutions.size() 
-                        << " | " << k->cycles_with_no_progress 
-                        << " | " << k->completed_nodes.size() << "\n";
+                    std::cout << "\t\t\t\tnumber of swaps for solution " << i << ": " 
+                        << k->swap_count << "\n\t\t\t\tnumber of completed solutions: " 
+                        << completed_solutions.size() 
+                        << "\n\t\t\t\tnumber of cycles with no progress: " 
+                        << k->cycles_with_no_progress 
+                        << "\n\t\t\t\tnumber of completed gates: " 
+                        << k->completed_nodes.size() << "\n";
                 }
             }
             if (k->front_layer.size() == 0) {
@@ -157,11 +157,8 @@ std::vector<compiled_schedule> router::run(dag& circuit,
         }
 #pragma omp barrier
         // Contract the solution tree once we reach a critical point.
-        if (next_solutions.size() > this->solution_cap 
-            || last_pruning_cycle >= pruning_max_cycle) 
-        {
+        if (next_solutions.size() > this->solution_cap) {
             current_solutions = contract_solutions(next_solutions);
-            last_pruning_cycle = 0;
         } else {
             current_solutions = std::move(next_solutions);
         }
@@ -201,13 +198,30 @@ std::vector<compiled_schedule> router::run(dag& circuit,
         compiled_schedule cs = {full_qasm, s->swap_count};
         schedules.push_back(cs);
     }
-    //std::cout << "minimum swap schedule is " << min_swaps << "\n";
+    //std::cout << "\t\t\tminimum swap schedule is " << min_swaps << "\n";
     return schedules;
 }
 
 std::vector<std::shared_ptr<solution_kernel>> router::explore_kernel(
     std::shared_ptr<solution_kernel> source) 
 {
+    if (source->kernel_type == KERNEL_HYBR) {
+        source->kernel_type = KERNEL_ASAP;
+        auto asap_kernels = explore_kernel(source);
+        source->kernel_type = KERNEL_ALAP;
+        auto alap_kernels = explore_kernel(source);
+        std::vector<std::shared_ptr<solution_kernel>> final_kernels;
+        for (auto k : asap_kernels) {
+            k->kernel_type = KERNEL_HYBR;
+            final_kernels.push_back(k);
+        }
+        for (auto k : alap_kernels) { 
+            k->kernel_type = KERNEL_ALAP;
+            final_kernels.push_back(k);
+        }
+        return final_kernels;
+    }
+    
     std::vector<boost_dagvertex> front_layer(source->front_layer);
     std::vector<boost_dagvertex> next_layer(source->next_layer);
     std::vector<boost_dagvertex> exec_list;
@@ -227,7 +241,7 @@ std::vector<std::shared_ptr<solution_kernel>> router::explore_kernel(
         for (boost_dagvertex node : front_layer) {
             dagnode nodedata = this->input_dag[node];
             if (completed_nodes.count(node) > 0) {
-                continue;
+                exec_list.push_back(node);
             } else if (nodedata.qargs.size() != 2) {
                 exec_list.push_back(node);
             } else {
@@ -266,6 +280,7 @@ std::vector<std::shared_ptr<solution_kernel>> router::explore_kernel(
         }
 
         // Schedule nodes in exec_list.
+        std::set<boost_dagvertex> visited;
         for (boost_dagvertex node : exec_list) {
             if (completed_nodes.count(node) == 0) {
                 cycles_with_no_progress = 0;  // reset counter.
@@ -276,6 +291,9 @@ std::vector<std::shared_ptr<solution_kernel>> router::explore_kernel(
             boost::graph_traits<dag>::adjacency_iterator ai,af;
             boost::tie(ai,af) = boost::adjacent_vertices(node, this->input_dag);
             for (; ai != af; ai++) {
+                if (visited.count(*ai) > 0) {
+                    continue;
+                }
                 if (pred.count(*ai) == 0) {
                     pred[*ai] = 0;
                 }
@@ -286,23 +304,27 @@ std::vector<std::shared_ptr<solution_kernel>> router::explore_kernel(
                 // The following behavior is only permitted if we are using ASAP.
                 if (source->kernel_type == KERNEL_ASAP && nodedata.qargs.size() == pred[*ai]) {
                     next_front_layer.push_back(*ai);
+                    visited.insert(*ai);
                 }
             }
             completed_nodes.insert(node);
         }
         if (source->kernel_type == KERNEL_ALAP && next_front_layer.size() == 0) {
             front_layer = std::move(next_layer);
-            next_layer = get_next_layer(front_layer, pred);
+            next_layer = get_next_layer(front_layer, pred, completed_nodes);
         } else {
             front_layer = std::move(next_front_layer);
         }
     } while (exec_list.size() > 0);  // We keep finishing gates until we cannot.
+    if (source->kernel_type == KERNEL_ASAP) {
+        next_layer = get_next_layer(front_layer, pred, completed_nodes);
+    }
     // Return early if the front layer is empty
     if (front_layer.size() == 0) {
         std::shared_ptr<solution_kernel> k(new solution_kernel);
         *k = (solution_kernel){
             next_layer,  // Move to the next layer.
-            get_next_layer(next_layer, pred),  // and get the next layer.
+            get_next_layer(next_layer, pred, completed_nodes),  // and get the next layer.
             completed_nodes,
             pred,
             current_layout,
@@ -311,6 +333,7 @@ std::vector<std::shared_ptr<solution_kernel>> router::explore_kernel(
             source->swap_count,
             completed_2qubit_gates,
             1.0,
+            0.0,
             source->kernel_type,
             cycles_with_no_progress
         };
@@ -323,26 +346,16 @@ std::vector<std::shared_ptr<solution_kernel>> router::explore_kernel(
     // We maintain buckets to track which fold belongs to which gate.
     std::vector<std::vector<fold>> buckets;
     double min_score = INFINITY;
+    std::vector<fold> final_solutions;
     for (uint32_t i = 0; i < front_layer.size(); i++) {
         boost_dagvertex node = front_layer[i];
         dagnode nodedata = this->input_dag[node];
         std::vector<labeled_fold> minfolds = 
-            get_minfolds(nodedata, current_layout, future_gates);
-        std::vector<fold> b;
-        for (labeled_fold lf : minfolds) {
-            if (lf.second <= min_score) {
-                if (lf.second < min_score) {
-                    // Empty all the buckets and the current bucket.
-                    buckets.clear();
-                    b.clear();
-                    min_score = lf.second;
-                }
-                b.push_back(lf.first);
-            }
+            get_minfolds(nodedata, current_layout, future_gates, source->kernel_type);
+        for (auto lf : minfolds) {
+            final_solutions.push_back(lf.first);
         }
-        buckets.push_back(b);
     }
-    auto final_solutions = merge_folds(buckets); 
     std::vector<std::shared_ptr<solution_kernel>> kernels;
     for (fold s : final_solutions) {
         // Copy data structures.
@@ -386,6 +399,7 @@ std::vector<std::shared_ptr<solution_kernel>> router::explore_kernel(
             swap_count + source->swap_count,
             completed_2qubit_gates,
             1.0,
+            min_score,
             source->kernel_type,
             cycles_with_no_progress
         };

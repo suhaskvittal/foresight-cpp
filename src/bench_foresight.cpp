@@ -11,16 +11,25 @@
 #include <chrono>
 #include <algorithm>
 
+#include <stdlib.h>
+#include <time.h>
+
 #include <sys/resource.h>
 #include <sys/stat.h>
 
 static router fs_alap;
 static router fs_asap;
+static router fs_hybr;
 static std::string benchmark_folder;
 
-static std::vector<uint8_t> fs_kernels{KERNEL_ALAP,KERNEL_ASAP};
+static std::vector<uint8_t> fs_kernels{KERNEL_ALAP,KERNEL_ASAP,KERNEL_HYBR};
 
+#ifndef FORESIGHT_TEST
 int main(int argc, char* argv[]) {
+#else
+int _main(int argc, char* argv[]) {
+#endif
+    srand(time(NULL));
     compile_benchmarks(argv[1], argv[2]);
     return 0;
 }
@@ -28,13 +37,15 @@ int main(int argc, char* argv[]) {
 void compile_benchmarks(std::string folder, std::string coupling_file) {
     benchmark_folder = folder;
     // Params for each varation of ForeSight
-    router_params alap_params = {2, 64, KERNEL_ALAP, 0};
-    router_params asap_params = {2, 64, KERNEL_ASAP, 0};
+    router_params alap_params = {2, 8, KERNEL_ALAP, 0};
+    router_params asap_params = {2, 8, KERNEL_ASAP, 0};
+    router_params hybr_params = {2, 8, KERNEL_HYBR, 0};
     // Get backend
     coupling_graph backend = load_coupling_graph(coupling_file);
     // Initialize both routers.
     fs_alap = router(backend, alap_params);
     fs_asap = router(backend, asap_params);
+    fs_hybr = router(backend, hybr_params);
     // Perform directory walk over benchmarks.
     if (ftw(folder.c_str(), &run_benchmark, 1)) {
         std::cout << "An error may have occurred.\n";
@@ -67,26 +78,33 @@ int run_benchmark(const char* c_fname, const struct stat* sb, int flag) {
         std::string circuit_file = filename 
             + "/mapped_circuit_" + std::to_string(i) + ".qasm";
         std::string qasm = read_qasm_file(circuit_file);
+        // Read qasm string.
+        dag circuit;
+        boost_dagvertex topvertex;
+
+        uint8_t condition_code;
+        auto properties = async_add_onto_dag(qasm, circuit, &topvertex, condition_code);
         for (uint8_t kernel_type : fs_kernels) {
             std::string kernel_name;
-            router fs;
+            router* fs_p;
             if (kernel_type == KERNEL_ALAP) {
                 kernel_name = "ALAP";
+                fs_p = &fs_alap; 
             } else if (kernel_type == KERNEL_ASAP) {
                 kernel_name = "ASAP";
+                fs_p = &fs_asap;
+            } else if (kernel_type == KERNEL_HYBR) {
+                kernel_name = "HYBR";
+                fs_p = &fs_hybr;
             }
 
             std::cout << "\t\t" << kernel_name << " started.\n";
+            // Collect results
             auto t1 = std::chrono::high_resolution_clock::now();
             compiled_schedule result;
             std::vector<long> mem_by_iter;
-            if (kernel_type == KERNEL_ALAP) {
-                result = compile(qasm, fs_alap);
-                mem_by_iter = fs_alap.memory_by_iteration;
-            } else if (kernel_type == KERNEL_ASAP) {
-                result = compile(qasm, fs_asap);
-                mem_by_iter = fs_asap.memory_by_iteration;
-            }
+            result = compile_from_dag(circuit, topvertex, properties, *fs_p);
+            mem_by_iter = fs_p->memory_by_iteration;
             auto t2 = std::chrono::high_resolution_clock::now();
             // Record time and memory usage.
             std::chrono::duration<double, std::milli> elapsed_time = t2-t1;
@@ -117,6 +135,7 @@ int run_benchmark(const char* c_fname, const struct stat* sb, int flag) {
         std::string kernel_name;
         if (kernel_type == KERNEL_ALAP) kernel_name = "ALAP";
         else if (kernel_type == KERNEL_ASAP) kernel_name = "ASAP";
+        else if (kernel_type == KERNEL_HYBR) kernel_name = "HYBR";
         out << kernel_name; 
         for (uint16_t i = kernel_type; i < time_array.size(); i += fs_kernels.size()) {
             out << " " << std::to_string(time_array[i]) 
