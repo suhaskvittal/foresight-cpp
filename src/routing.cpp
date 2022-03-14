@@ -198,7 +198,7 @@ std::vector<compiled_schedule> router::run(dag& circuit,
         compiled_schedule cs = {full_qasm, s->swap_count};
         schedules.push_back(cs);
     }
-    //std::cout << "\t\t\tminimum swap schedule is " << min_swaps << "\n";
+    //std::cout << "minimum swap schedule is " << min_swaps << "\n";
     return schedules;
 }
 
@@ -353,7 +353,13 @@ std::vector<std::shared_ptr<solution_kernel>> router::explore_kernel(
         std::vector<labeled_fold> minfolds = 
             get_minfolds(nodedata, current_layout, future_gates, source->kernel_type);
         for (auto lf : minfolds) {
-            final_solutions.push_back(lf.first);
+            if (lf.second <= min_score) {
+                if (lf.second < min_score) {
+                    min_score = lf.second;
+                    final_solutions.clear();
+                }
+                final_solutions.push_back(lf.first);
+            }
         }
     }
     std::vector<std::shared_ptr<solution_kernel>> kernels;

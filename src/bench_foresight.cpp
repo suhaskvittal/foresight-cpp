@@ -37,9 +37,9 @@ int _main(int argc, char* argv[]) {
 void compile_benchmarks(std::string folder, std::string coupling_file) {
     benchmark_folder = folder;
     // Params for each varation of ForeSight
-    router_params alap_params = {2, 8, KERNEL_ALAP, 0};
-    router_params asap_params = {2, 8, KERNEL_ASAP, 0};
-    router_params hybr_params = {2, 8, KERNEL_HYBR, 0};
+    router_params alap_params = {2, 64, KERNEL_ALAP, 0};
+    router_params asap_params = {2, 64, KERNEL_ASAP, 0};
+    router_params hybr_params = {2, 64, KERNEL_HYBR, 0};
     // Get backend
     coupling_graph backend = load_coupling_graph(coupling_file);
     // Initialize both routers.

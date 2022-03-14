@@ -40,15 +40,22 @@ std::vector<std::shared_ptr<solution_kernel>> router::contract_solutions(
     uint16_t prune_cap = this->solution_cap >= 8 ? this->solution_cap / 4 : 1;
     if (min_kernels.size() > prune_cap) {
         // Compute score table in parallel
-        /*
         std::map<std::shared_ptr<solution_kernel>,double> score_table;
         uint32_t m = min_kernels.size();
+        /*
 #pragma omp parallel for
         for (uint32_t i = 0; i < m; i++) {
             std::shared_ptr<solution_kernel> k = min_kernels[i];
             auto future_gates = get_future_gates(k->front_layer,
                 k->predecessor_table, k->completed_nodes);
-            double score = score_layout(0, k->current_layout, future_gates);  
+            double score;
+            if (k->kernel_type == KERNEL_HYBR) {
+                double score1 = score_layout(0, k->current_layout, future_gates, KERNEL_ALAP);
+                double score2 = score_layout(0, k->current_layout, future_gates, KERNEL_ASAP);
+                score = score1 < score2 ? score1 : score2;
+            } else {
+                score = score_layout(0, k->current_layout, future_gates, k->kernel_type);  
+            }
 #pragma omp critical
             {
                 score_table[k] = score;
@@ -67,11 +74,13 @@ std::vector<std::shared_ptr<solution_kernel>> router::contract_solutions(
             filtered_kernels.push_back(min_kernels[i]);
         }
         /*
+        std::vector<std::shared_ptr<solution_kernel>> filtered_kernels;
         for (uint16_t i = 0; i < m; i++) {
             if (i < prune_cap) {
                 filtered_kernels.push_back(min_kernels[i]);
             }
-        }*/
+        }
+        */
         // Move filtered kernels into min kernels
         min_kernels = std::move(filtered_kernels);
     }
@@ -384,7 +393,7 @@ double router::score_layout(
                 pscore += distance;
                 pops++;
             } else {
-                sscore += distance * 0.5 * exp2(-depth/this->mean_degree);
+                sscore += distance * exp2(-depth/this->mean_degree);
                 sops++;
             }
         } else {
