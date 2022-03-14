@@ -68,7 +68,7 @@ cx q[11], q[5];
 cx q[12], q[11];
 tdg q[5];
 t q[11];
-swap q[11], q[5];
+swap q[5], q[11];
 cx q[12], q[11];
 tdg q[12];
 tdg q[11];

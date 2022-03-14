@@ -217,104 +217,56 @@ std::vector<labeled_fold> router::get_minfolds(
     auto src_dst = std::make_pair(src,dst);
     std::vector<path> paths = this->paths_on_arch[src_dst];
 
+    double min_score = INFINITY;
     std::vector<labeled_fold> minfolds;
 
-    minfold_dp DEFAULT_MINFOLD_DP_ENTRY = {
-        std::pair<pqubit,pqubit>(0,0),
-        current_layout,
-        std::vector<uint32_t>(),
-        INFINITY
-    };
-
     for (path p : paths) {
-        double min_score = INFINITY;
-        // Construct minfold DP.
-        uint32_t r = p.size();
-        std::vector<std::vector<minfold_dp>> dp(r,
-            std::vector<minfold_dp>(r, DEFAULT_MINFOLD_DP_ENTRY));
-        for (uint32_t i = 0; i < r; i++) {
-            for (uint32_t j = 0; j < r-i; j++) {
-                std::pair<pqubit,pqubit> swap; 
-                layout test_layout;
-                if (i == 0 && j == 0) {
-                    continue;
-                } else if (j == 0) {
-                    swap = std::make_pair(p[r-i], p[r-i-1]);
-                    test_layout = layout(dp[i-1][j].running_layout);
-                } else {
-                    swap = std::make_pair(p[j], p[j-1]);
-                    test_layout = layout(dp[i][j-1].running_layout);
+        // Compute minfold
+        layout latest_layout(current_layout);
+        fold latest_fold;
+        for (uint32_t i = 1; i < p.size(); i++) {
+            fold f(latest_fold);
+            layout test_layout(latest_layout);
+            if (i == 1) {
+                uint32_t j = p.size() - 1;
+                while (j > i) {
+                    pqubit p1 = p[j];
+                    pqubit p2 = p[j-1];
+                    f.push_back(std::make_pair(p1,p2));
+                    test_layout.swap(p1,p2);
+                    j--;
                 }
-                dp[i][j].swap = swap;
-                test_layout.swap(swap.first, swap.second);
-                // Measure score of the layout.
-                double score = score_layout(i+j, test_layout, future_gates, kernel_type);
-                // Add self as best in row (to array) if score <= min_score.
-                if (j == 0 || score < dp[i][j-1].min_score) {
-                    dp[i][j].best_in_row.push_back(j); // Already empty.
-                    dp[i][j].min_score = score;
-                } else {
-                    // Copy best in row array.
-                    dp[i][j].best_in_row = std::vector<uint32_t>(dp[i][j-1].best_in_row);
-//                    if (score == dp[i][j-1].min_score) {
-//                        dp[i][j].best_in_row.push_back(j);
-//                    }
-                    dp[i][j].min_score = dp[i][j-1].min_score;
-                }
-                dp[i][j].running_layout = test_layout;
+            } else {
+                // Undo this swap and perform the one before it.
+                pqubit u1 = p[i-2], u2 = p[i-1], u3 = p[i];
+                test_layout.swap(u2, u3);  // undo
+                test_layout.swap(u1, u2);
+                f.pop_back();
+                f.insert(f.begin() + (i-2), std::make_pair(u1,u2));
             }
-        }
-        // Examine the off-diagonal of dp to get the best results for each row.
-        std::vector<std::pair<uint32_t,uint32_t>> best_entry_locs;
-        for (uint32_t i = 0; i < r; i++) {
-            uint32_t j = r-i-1;
-            minfold_dp dp_entry = dp[i][j];
-            // Note that min_score is the global min score across all folds.
-            // So we will clear minfolds if we achieve a lower min score.
-            if (dp_entry.min_score <= min_score) {
-                if (dp_entry.min_score < min_score) { 
-                    best_entry_locs.clear();
-                    min_score = dp_entry.min_score;
+            latest_layout = test_layout;
+            latest_fold = f;
+            // Compute score.
+            double score = score_layout(p.size()-1, test_layout, future_gates, kernel_type);
+            if (score <= min_score) {
+                if (score < min_score) {
+                    minfolds.clear();
+                    min_score = score;
                 }
-                for (uint32_t k : dp_entry.best_in_row) {
-                    best_entry_locs.push_back(std::make_pair(i, k));
-                }
-            } 
-        }
-
-        for (auto loc : best_entry_locs) {
-            uint32_t i = loc.first;
-            uint32_t j = loc.second;
-            fold minfold;
-            uint32_t k1 = 1;
-            uint32_t k2 = 1;
-            uint8_t clk = 0;  // We want to interleave the swaps from both sides.
-            // We use a clock to track which side we are using.
-            while (k1 <= i || k2 <= j) {
-                if (clk) {
-                    if (k2 <= j) {
-                        minfold.push_back(dp[0][k2++].swap);
-                    }
-                } else {
-                    if (k1 <= i) {
-                        minfold.push_back(dp[k1++][0].swap);
-                    }
-                }
-                clk = ~clk;
+                minfolds.push_back(std::make_pair(f, score));
             }
-            minfolds.push_back(std::make_pair(minfold, min_score));
         }
     }
     return minfolds;
 }
 
-std::vector<fold> router::merge_folds(std::vector<std::vector<fold>>& fold_buckets) {
+std::vector<fold> router::merge_folds(std::vector<std::vector<labeled_fold>>& fold_buckets) {
     // Attempt to combine non-intersecting folds.
     // Checking all combinations is exponential time, so we will check on a FCFS basis.
     std::vector<fold> merged_folds;
     while (1) {
         // Retrieve a folds from each bucket.
-        std::vector<fold> folds;
+        std::vector<labeled_fold> folds;
         std::set<uint32_t> fold_indices;
         for (uint32_t i = 0; i < fold_buckets.size(); i++) {
             if (fold_buckets[i].size() > 0) {
@@ -326,18 +278,55 @@ std::vector<fold> router::merge_folds(std::vector<std::vector<fold>>& fold_bucke
         if (folds.size() == 0) {
             break;
         }
-        fold curr_fold;
-        std::set<pqubit> occupied_qubits;
+        labeled_fold curr_fold;
+        std::map<std::pair<pqubit,pqubit>> swap_map;
         // Track unused folds.
         std::set<uint32_t> unused_fold_indices;
         // Try to merge the remaining folds if possible.
         uint32_t j = 0;
         for (uint32_t i = 0; i < fold_buckets.size(); i++) {
             if (fold_indices.count(i) == 0) continue;
-            fold trial_fold(curr_fold);
-            fold candidate_fold = folds[j++]; 
-            uint8_t conflict = 0;
-            std::set<pqubit> occupied_qubits_next(occupied_qubits);
+            labeled_fold candidate_fold = folds[j++]; 
+            std::vector<std::pair<uint32_t,uint32_t>> matching_points;
+            uint32_t prev_matching_point;
+            // Find all the matching points.
+            // Matching point (x,y) is such that OLD[x] and NEW[y] have the same swap.
+            for (uint32_t j = 0; j < candidate_fold.first.size(); j++) {
+                std::pair<pqubit,pqubit> s = candidate_fold.first[j]; 
+                std::pair<pqubit,pqubit> rs = std::make_pair(s.second, s.first);  // make reverse
+                if (swap_map.count(s) && swap_map[s] > prev_matching_point) {
+                    matching_points.push_back(std::make_pair(swap_map[s], j));
+                    prev_matching_point = swap_map[s];
+                } else if (swap_map.count(rs) && swap_map[rs] > prev_matching_point) {
+                    matching_points.push_back(std::make_pair(swap_map[rs], j));
+                    prev_matching_point = swap_map[rs];
+                }
+            }
+
+            fold trial_fold;
+            // Interleave swaps.
+            uint32_t j1 = 0, j2 = 0;
+            uint8_t clk = 0;
+            // Track matching point while interleaving
+            std::pair<uint32_t, uint32_t> top_matching_point;
+            uint8_t is_valid = (matching_points.size() > 0);
+            while (j1 < curr_fold.first.size() || j2 < candidate_fold.first.size()) {
+                uint8_t curr_match_condition = 
+                    !(j1 == top_matching_point.first && j2 < top_matching_point.second);
+                uint8_t cand_match_condition =
+                    !(j2 == top_matching_point.second && j1 < top_matching_point.first);
+                if (clk) {
+                    if (j2 < candidate_fold.first.size() && cand_match_condition) {
+                        trial_fold.push_back(candidate_fold.first[j2++]);
+                    }
+                } else {
+                    if (j1 < curr_fold.first.size() && curr_match_condition) {
+                        trial_fold.push_back(curr_fold.first[j1++]);
+                    }
+                }
+                clk = ~clk;
+            }
+
             for (std::pair<pqubit,pqubit> swap : candidate_fold) {
                 if (occupied_qubits.count(swap.first) == 0
                     && occupied_qubits.count(swap.second) == 0) 
@@ -349,13 +338,6 @@ std::vector<fold> router::merge_folds(std::vector<std::vector<fold>>& fold_bucke
                     conflict = 1;
                     break;
                 }
-            }
-
-            if (conflict) {
-                unused_fold_indices.insert(i);
-            } else {
-                curr_fold = std::move(trial_fold);
-                occupied_qubits = std::move(occupied_qubits_next);
             }
         }
         merged_folds.push_back(curr_fold);
@@ -393,7 +375,7 @@ double router::score_layout(
                 pscore += distance;
                 pops++;
             } else {
-                sscore += distance * exp2(-depth/this->mean_degree);
+                sscore += distance * exp(-pow(depth/this->mean_degree,2.0));
                 sops++;
             }
         } else {

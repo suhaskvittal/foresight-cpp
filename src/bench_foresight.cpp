@@ -37,9 +37,9 @@ int _main(int argc, char* argv[]) {
 void compile_benchmarks(std::string folder, std::string coupling_file) {
     benchmark_folder = folder;
     // Params for each varation of ForeSight
-    router_params alap_params = {2, 64, KERNEL_ALAP, 0};
-    router_params asap_params = {2, 64, KERNEL_ASAP, 0};
-    router_params hybr_params = {2, 64, KERNEL_HYBR, 0};
+    router_params alap_params = {2, 8, KERNEL_ALAP, 0};
+    router_params asap_params = {2, 8, KERNEL_ASAP, 0};
+    router_params hybr_params = {2, 8, KERNEL_HYBR, 0};
     // Get backend
     coupling_graph backend = load_coupling_graph(coupling_file);
     // Initialize both routers.
@@ -100,31 +100,42 @@ int run_benchmark(const char* c_fname, const struct stat* sb, int flag) {
 
             std::cout << "\t\t" << kernel_name << " started.\n";
             // Collect results
-            auto t1 = std::chrono::high_resolution_clock::now();
-            compiled_schedule result;
-            std::vector<long> mem_by_iter;
-            result = compile_from_dag(circuit, topvertex, properties, *fs_p);
-            mem_by_iter = fs_p->memory_by_iteration;
-            auto t2 = std::chrono::high_resolution_clock::now();
-            // Record time and memory usage.
-            std::chrono::duration<double, std::milli> elapsed_time = t2-t1;
-            time_array.push_back(elapsed_time.count());
-            memory_array.push_back(
-                *std::max_element(
-                    mem_by_iter.begin(),
-                    mem_by_iter.end()));
+            double min_time = INFINITY;  // in milliseconds
+            long min_memory = LONG_MAX;  // in bytes
+            compiled_schedule min_result;
+            for (uint8_t run = 0; run < 5; run++) {
+                auto t1 = std::chrono::high_resolution_clock::now();
+                std::vector<long> mem_by_iter;
+                compiled_schedule result = 
+                    compile_from_dag(circuit, topvertex, properties, *fs_p);
+                mem_by_iter = fs_p->memory_by_iteration;
+                auto t2 = std::chrono::high_resolution_clock::now();
+                // Record time and memory usage.
+                std::chrono::duration<double, std::milli> elapsed_time = t2-t1;
+                double time = elapsed_time.count();
+                long mem = *std::max_element(mem_by_iter.begin(), mem_by_iter.end());
+                // Compare with min result so far.
+                if (run == 0 || result.swap_count < min_result.swap_count) {
+                    min_result = result;
+                    min_time = time;
+                    min_memory = mem;
+                }
+            }
+            time_array.push_back(min_time);
+            memory_array.push_back(min_memory);
             // Print out to console
-            if (result.qasm == FAILURE_STRING) {
+            if (min_result.qasm == FAILURE_STRING) {
                 std::cout << "\t\tForeSight " << kernel_name << " failed.\n";
             } else {
                 std::cout << "\t\t" << kernel_name << " completed with " 
-                    << result.swap_count << " swaps, time = " << elapsed_time.count() << "\n";
+                    << min_result.swap_count 
+                    << " swaps, time = " << min_time << "\n";
             }
             // Write qasm file to directory
             std::string output_file = filename + "/foresight_" + kernel_name + "_" 
                 + std::to_string(i) + ".qasm";
             std::ofstream out(output_file, std::ofstream::out);
-            out << result.qasm;
+            out << min_result.qasm;
             out.close();
         }
     }
