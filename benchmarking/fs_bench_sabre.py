@@ -44,7 +44,7 @@ if __name__ == '__main__':
             min_mem = -1
 
             tracemalloc.start(4)
-            for _ in range(20):
+            for _ in range(5):
                 tracemalloc.reset_peak()
                 start = time.time()
                 sabre_circ = sabre.run(circ)
