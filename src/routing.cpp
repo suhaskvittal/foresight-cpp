@@ -220,9 +220,7 @@ std::vector<compiled_schedule> router::run(dag& circuit,
         std::string full_qasm = qasm_header + qasm_body;
         compiled_schedule cs = {full_qasm, s->swap_count};
         schedules.push_back(cs);
-        std::cout << "kernel string: " << s->kernel_string << "\n";
     }
-    std::cout << "minimum swap schedule is " << min_swaps << "\n";
     return schedules;
 }
 
