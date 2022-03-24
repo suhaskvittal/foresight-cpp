@@ -28,6 +28,8 @@ typedef boost::adjacency_list<
     pqubit,
     hardware_link> coupling_graph; 
 
+// Layout definition
+
 class layout {
 public:
     layout() =default;
@@ -36,9 +38,28 @@ public:
 
     void swap(pqubit,pqubit);
 
+    bool operator==(const layout& other) const {
+        for (auto iter=v2p.begin(); iter != v2p.end(); iter++) {
+            vqubit key = iter->first;
+            if (iter->second != other.v2p.at(key)) return false;
+        }
+        return true; 
+    }
+
     std::map<vqubit,pqubit> v2p;
     std::map<pqubit,vqubit> p2v;
 };
+
+namespace std {
+    template <>
+    struct hash<layout> {
+        std::size_t operator()(const layout& lay) const {
+            return hash<vqubit>{}(lay.v2p.at(0));
+        }
+    };
+}
+
+// Distance computation
 
 typedef std::vector<pqubit> path;
 

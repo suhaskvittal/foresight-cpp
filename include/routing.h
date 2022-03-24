@@ -21,24 +21,31 @@
 #define KERNEL_ASAP 1
 #define KERNEL_HYBR 2
 
+typedef std::vector<std::pair<pqubit,pqubit>> fold;
+typedef std::pair<fold, double> labeled_fold;
+
 struct solution_kernel {
-    std::vector<boost_dagvertex> front_layer;
-    std::vector<boost_dagvertex> next_layer;
+    // front_layer != proper_layer in hybrid policy.
+    std::vector<boost_dagvertex> front_layer;   // ALAP correct front layer
+    std::vector<boost_dagvertex> proper_layer;  // ASAP correct front layer 
+    std::vector<boost_dagvertex> next_layer;    // layer following proper_layer in ALAP
     std::set<boost_dagvertex> completed_nodes;
     std::map<boost_dagvertex, uint8_t> predecessor_table;
     
     layout current_layout;
 
-    std::deque<dagnode> schedule; 
-    std::shared_ptr<solution_kernel> parent_kernel;
+    std::deque<dagnode> schedule;   // Schedule of gates completed in iteration + swaps inserted.
+    std::shared_ptr<solution_kernel> parent_kernel; 
 
     uint32_t swap_count;
     uint32_t completed_2qubit_gates;
     double expected_prob_success;
     double solution_score;
 
-    uint8_t kernel_type;
     uint32_t cycles_with_no_progress;
+    uint8_t kernel_type;
+    uint8_t prev_kernel;
+    std::string kernel_string;
 };
 
 struct compiled_schedule {
@@ -53,15 +60,11 @@ struct router_params {
     uint8_t debug_mode;
 };
 
-struct minfold_dp {
-    std::pair<pqubit,pqubit> swap;
-    layout running_layout;
-    std::vector<uint32_t> best_in_row;
-    double min_score;
+struct layout_table_entry {
+    fold minfold; 
+    uint16_t size;
+    double score;
 };
-
-typedef std::vector<std::pair<pqubit,pqubit>> fold;
-typedef std::pair<fold, double> labeled_fold;
 
 class router {
 public:
@@ -73,7 +76,10 @@ public:
     std::vector<std::shared_ptr<solution_kernel>> explore_kernel(
         std::shared_ptr<solution_kernel> source);
 
+    // Statistics
     std::vector<long> memory_by_iteration;
+    uint32_t iterations;
+    uint32_t prune_events;
 private:
     friend class kernel_cmp;
 

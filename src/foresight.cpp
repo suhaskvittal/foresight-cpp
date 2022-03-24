@@ -3,39 +3,12 @@
     date:   28 February 2022
 */
 
-#include "../include/foresight.h"
+#include "foresight.h"
 
 #include <iostream>
 #include <fstream>
 #include <string>
 #include <algorithm>
-
-#include <stdlib.h>
-#include <time.h>
-
-#ifdef FORESIGHT_TEST
-int main(int argc, char* argv[]) {
-#else
-int _main(int argc, char* argv[]) {
-#endif
-    srand(time(NULL));
-
-    for (int i = 0; i < argc; i++) {
-        std::cout << "arg " << i << ": " << argv[i] << "\n";
-    }
-    
-    std::string qasm_string = read_qasm_file(std::string(argv[1]));
-
-    coupling_graph backend = load_coupling_graph(argv[2]);
-    router_params params = {std::stod(argv[3]), std::stoi(argv[4]), KERNEL_HYBR, 0}; 
-    router foresight(backend, params);
-
-    auto compiled_circ = compile(qasm_string, foresight); 
-    std::ofstream out("test_circ.qasm", std::ofstream::out);
-    out << compiled_circ.qasm;
-    out.close();
-    return 0;
-}
 
 std::string read_qasm_file(std::string filename) {
     std::string qasm_string;

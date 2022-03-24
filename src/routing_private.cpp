@@ -8,8 +8,15 @@
 #include <algorithm>
 #include <parallel/algorithm>
 
+#include <unordered_map>
+
 #include <stdlib.h>
 #include <math.h>
+
+double _cost(std::shared_ptr<solution_kernel> k) {
+    return k->completed_2qubit_gates == 0 ? ((double)k->swap_count) :
+        ((double)k->swap_count)/((double)k->completed_2qubit_gates);
+}
 
 std::vector<std::shared_ptr<solution_kernel>> router::contract_solutions(
     std::vector<std::shared_ptr<solution_kernel>>& fresh_kernels)
@@ -17,54 +24,37 @@ std::vector<std::shared_ptr<solution_kernel>> router::contract_solutions(
     // Choose the best kernels in this batch.
     double min_cost = INFINITY;  // should be UINT32_T MAX    
     std::vector<std::shared_ptr<solution_kernel>> min_kernels;
+    std::unordered_map<layout, std::shared_ptr<solution_kernel>> layout_table;
     while (fresh_kernels.size() > 0) {
         std::shared_ptr<solution_kernel> k = fresh_kernels.back();
-        double cost;
-        
-        if (k->completed_2qubit_gates == 0) {
-            cost = ((double)k->swap_count);
+        layout current_layout = k->current_layout;
+        if (layout_table.count(current_layout) == 0) {
+            layout_table[current_layout] = k;
         } else {
-            cost = ((double)k->swap_count) / ((double)k->completed_2qubit_gates);
-        }
-        //cost = ((double)k->swap_count) / ((double)k->completed_nodes.size());
-        if (cost <= min_cost) {
-            if (cost < min_cost) {
-                min_kernels.clear();
-                min_cost = cost;
+            std::shared_ptr<solution_kernel> repr = layout_table[current_layout];
+            if (_cost(k) <= _cost(repr)) {
+                layout_table[current_layout] = k;
             }
-            min_kernels.push_back(k);
         }
         fresh_kernels.pop_back();
     } 
+    for (auto iter = layout_table.begin(); iter != layout_table.end(); iter++) {
+        auto k = iter->second;
+        double cost = _cost(k);
+        if (cost <= min_cost) {
+            if (cost < min_cost) {
+                min_cost = cost;
+                min_kernels.clear();
+            }
+            min_kernels.push_back(iter->second);
+        }
+    }
     // If we still have too many kernels, choose a few at random.
     uint16_t prune_cap = this->solution_cap >= 8 ? this->solution_cap / 4 : 1;
     if (min_kernels.size() > prune_cap) {
         // Compute score table in parallel
         std::map<std::shared_ptr<solution_kernel>,double> score_table;
         uint32_t m = min_kernels.size();
-        /*
-#pragma omp parallel for
-        for (uint32_t i = 0; i < m; i++) {
-            std::shared_ptr<solution_kernel> k = min_kernels[i];
-            auto future_gates = get_future_gates(k->front_layer,
-                k->predecessor_table, k->completed_nodes);
-            double score;
-            if (k->kernel_type == KERNEL_HYBR) {
-                double score1 = score_layout(0, k->current_layout, future_gates, KERNEL_ALAP);
-                double score2 = score_layout(0, k->current_layout, future_gates, KERNEL_ASAP);
-                score = score1 < score2 ? score1 : score2;
-            } else {
-                score = score_layout(0, k->current_layout, future_gates, k->kernel_type);  
-            }
-#pragma omp critical
-            {
-                score_table[k] = score;
-            }
-        }
-#pragma omp barrier
-        // Perform parallel sort
-        __gnu_parallel::sort(min_kernels.begin(), min_kernels.end(), kernel_cmp(score_table));
-        */
         std::vector<std::shared_ptr<solution_kernel>> filtered_kernels;
         std::set<uint16_t> random_indices;
         while (random_indices.size() < prune_cap) {
@@ -73,14 +63,6 @@ std::vector<std::shared_ptr<solution_kernel>> router::contract_solutions(
         for (uint16_t i : random_indices) {
             filtered_kernels.push_back(min_kernels[i]);
         }
-        /*
-        std::vector<std::shared_ptr<solution_kernel>> filtered_kernels;
-        for (uint16_t i = 0; i < m; i++) {
-            if (i < prune_cap) {
-                filtered_kernels.push_back(min_kernels[i]);
-            }
-        }
-        */
         // Move filtered kernels into min kernels
         min_kernels = std::move(filtered_kernels);
     }
@@ -217,7 +199,7 @@ std::vector<labeled_fold> router::get_minfolds(
     auto src_dst = std::make_pair(src,dst);
     std::vector<path> paths = this->paths_on_arch[src_dst];
 
-    double min_score = INFINITY;
+    std::unordered_map<layout, layout_table_entry> layout_table;
     std::vector<labeled_fold> minfolds;
 
     for (path p : paths) {
@@ -248,14 +230,30 @@ std::vector<labeled_fold> router::get_minfolds(
             latest_fold = f;
             // Compute score.
             double score = score_layout(p.size()-1, test_layout, future_gates, kernel_type);
-            if (score <= min_score) {
-                if (score < min_score) {
-                    minfolds.clear();
-                    min_score = score;
-                }
-                minfolds.push_back(std::make_pair(f, score));
+            if (layout_table.count(test_layout) == 0
+                || score < layout_table[test_layout].score)
+            { 
+                layout_table[test_layout] = (layout_table_entry) {
+                    f,
+                    p.size()-1,
+                    score 
+                };
             }
         }
+    }
+    // Traverse through layout table to get minfolds.
+    double min_score = INFINITY;
+    for (auto iter = layout_table.begin(); iter != layout_table.end(); iter++) {
+        auto table_entry = iter->second;
+        if (table_entry.score <= min_score) {
+            if (table_entry.score < min_score) {
+                minfolds.clear();
+                min_score = table_entry.score;
+            }
+            minfolds.push_back(std::make_pair(table_entry.minfold, table_entry.score));
+        }
+        
+        //minfolds.push_back(std::make_pair(table_entry.minfold, table_entry.score));
     }
     return minfolds;
 }
@@ -268,6 +266,7 @@ std::vector<fold> router::merge_folds(
 {
     // Attempt to combine non-intersecting folds.
     // Checking all combinations is exponential time, so we will check on a FCFS basis.
+    double min_score = INFINITY;
     std::vector<fold> merged_folds;
     while (1) {
         // Retrieve a folds from each bucket.

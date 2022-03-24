@@ -24,11 +24,7 @@ static std::string benchmark_folder;
 
 static std::vector<uint8_t> fs_kernels{KERNEL_ALAP,KERNEL_ASAP,KERNEL_HYBR};
 
-#ifndef FORESIGHT_TEST
 int main(int argc, char* argv[]) {
-#else
-int _main(int argc, char* argv[]) {
-#endif
     srand(time(NULL));
     compile_benchmarks(argv[1], argv[2]);
     return 0;
